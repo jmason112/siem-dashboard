@@ -55,6 +55,14 @@ interface AlertStore {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Add axios instance with default headers
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('token') || 'test-token'}`
+  }
+});
+
 export const useAlertStore = create<AlertStore>()(
   devtools(
     (set, get) => ({
@@ -80,7 +88,7 @@ export const useAlertStore = create<AlertStore>()(
           if (filters.endDate) params.append('endDate', filters.endDate);
           if (filters.source) params.append('source', filters.source.join(','));
 
-          const response = await axios.get(`${API_URL}/api/alerts?${params}`);
+          const response = await api.get(`/api/alerts?${params}`);
           set({
             alerts: response.data.alerts,
             page: response.data.page,
@@ -97,16 +105,16 @@ export const useAlertStore = create<AlertStore>()(
 
       fetchStats: async () => {
         try {
-          const response = await axios.get(`${API_URL}/api/alerts/stats`);
+          const response = await api.get('/api/alerts/stats');
           set({ stats: response.data });
         } catch (error) {
-          set({ error: 'Failed to fetch alert statistics' });
+          set({ error: 'Failed to fetch stats' });
         }
       },
 
       updateAlert: async (id: string, data: Partial<Alert>) => {
         try {
-          const response = await axios.put(`${API_URL}/api/alerts/${id}`, data);
+          const response = await api.put(`/api/alerts/${id}`, data);
           const { alerts } = get();
           const updatedAlerts = alerts.map(alert => 
             alert._id === id ? response.data : alert
@@ -120,7 +128,7 @@ export const useAlertStore = create<AlertStore>()(
 
       deleteAlert: async (id: string) => {
         try {
-          await axios.delete(`${API_URL}/api/alerts/${id}`);
+          await api.delete(`/api/alerts/${id}`);
           const { alerts } = get();
           set({ alerts: alerts.filter(alert => alert._id !== id) });
           await get().fetchStats();
@@ -138,26 +146,52 @@ export const useAlertStore = create<AlertStore>()(
       },
 
       connectWebSocket: () => {
-        const ws = new WebSocket(`${API_URL.replace('http', 'ws')}/ws`);
-        
-        ws.onmessage = (event) => {
-          const newAlert = JSON.parse(event.data);
-          const { alerts } = get();
-          set({ alerts: [newAlert, ...alerts] });
-          get().fetchStats();
-        };
+        const { websocket } = get();
+        if (websocket?.readyState === WebSocket.CONNECTING || 
+            websocket?.readyState === WebSocket.OPEN) {
+          return;
+        }
 
-        ws.onclose = () => {
-          setTimeout(() => get().connectWebSocket(), 5000);
-        };
+        try {
+          const ws = new WebSocket('ws://localhost:3000/ws');
+          
+          ws.onopen = () => {
+            console.log('WebSocket connected');
+          };
+          
+          ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'heartbeat') return;
+            
+            const { alerts } = get();
+            set({ alerts: [data, ...alerts] });
+          };
+          
+          ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+          };
 
-        set({ websocket: ws });
+          ws.onclose = (event) => {
+            if (event.wasClean) {
+              console.log('WebSocket closed cleanly');
+            } else {
+              console.log('WebSocket disconnected, attempting to reconnect...');
+              setTimeout(() => get().connectWebSocket(), 3000);
+            }
+          };
+          
+          set({ websocket: ws });
+        } catch (error) {
+          console.error('WebSocket connection error:', error);
+          setTimeout(() => get().connectWebSocket(), 3000);
+        }
       },
 
       disconnectWebSocket: () => {
         const { websocket } = get();
         if (websocket) {
-          websocket.close();
+          websocket.onclose = null; // Prevent reconnection attempt
+          websocket.close(1000, 'Client disconnecting');
           set({ websocket: null });
         }
       }

@@ -59,12 +59,15 @@ export default function AlertsPage() {
   } = useAlertStore();
 
   useEffect(() => {
+    const { websocket } = useAlertStore.getState();
     fetchAlerts();
     fetchStats();
     connectWebSocket();
 
     return () => {
-      disconnectWebSocket();
+      if (websocket?.readyState === WebSocket.OPEN) {
+        disconnectWebSocket();
+      }
     };
   }, []);
 
@@ -175,22 +178,24 @@ export default function AlertsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
+              <TableRow key="loading">
                 <TableCell colSpan={6} className="text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : alerts.length === 0 ? (
-              <TableRow>
+              <TableRow key="no-data">
                 <TableCell colSpan={6} className="text-center">
                   No alerts found
                 </TableCell>
               </TableRow>
             ) : (
               alerts.map((alert) => (
-                <TableRow key={alert._id}>
+                <TableRow key={alert._id || `alert-${alert.timestamp}`}>
                   <TableCell>
-                    {format(new Date(alert.timestamp), "PPpp")}
+                    {alert.timestamp
+                      ? format(new Date(alert.timestamp), "PPpp")
+                      : "N/A"}
                   </TableCell>
                   <TableCell>
                     <Badge

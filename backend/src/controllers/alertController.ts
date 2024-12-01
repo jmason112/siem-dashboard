@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Alert, IAlert } from '../models/Alert';
+import { Alert } from '../models/Alert';
 import { logger } from '../config/logger';
 
 export const alertController = {
@@ -44,16 +44,39 @@ export const alertController = {
     }
   },
 
+  // Get alert statistics
+  async getStats(req: Request, res: Response) {
+    try {
+      const total = await Alert.countDocuments();
+      
+      const bySeverity = await Alert.aggregate([
+        { $group: { _id: '$severity', count: { $sum: 1 } } }
+      ]).then(results => 
+        results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
+      );
+
+      const byStatus = await Alert.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]).then(results => 
+        results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
+      );
+
+      res.json({
+        total,
+        bySeverity,
+        byStatus
+      });
+    } catch (error) {
+      logger.error('Error fetching alert stats:', error);
+      res.status(500).json({ error: 'Error fetching alert statistics' });
+    }
+  },
+
   // Create new alert
   async createAlert(req: Request, res: Response) {
     try {
-      const alertData: IAlert = req.body;
-      const alert = new Alert(alertData);
+      const alert = new Alert(req.body);
       await alert.save();
-      
-      // Broadcast to WebSocket clients
-      // TODO: Implement WebSocket broadcast
-
       res.status(201).json(alert);
     } catch (error) {
       logger.error('Error creating alert:', error);
@@ -61,22 +84,17 @@ export const alertController = {
     }
   },
 
-  // Update alert status
+  // Update alert
   async updateAlert(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const updateData = req.body;
-
       const alert = await Alert.findByIdAndUpdate(
-        id,
-        updateData,
+        req.params.id,
+        req.body,
         { new: true }
       );
-
       if (!alert) {
         return res.status(404).json({ error: 'Alert not found' });
       }
-
       res.json(alert);
     } catch (error) {
       logger.error('Error updating alert:', error);
@@ -87,56 +105,14 @@ export const alertController = {
   // Delete alert
   async deleteAlert(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const alert = await Alert.findByIdAndDelete(id);
-
+      const alert = await Alert.findByIdAndDelete(req.params.id);
       if (!alert) {
         return res.status(404).json({ error: 'Alert not found' });
       }
-
       res.json({ message: 'Alert deleted successfully' });
     } catch (error) {
       logger.error('Error deleting alert:', error);
       res.status(500).json({ error: 'Error deleting alert' });
-    }
-  },
-
-  // Get alert statistics
-  async getAlertStats(req: Request, res: Response) {
-    try {
-      const stats = await Alert.aggregate([
-        {
-          $group: {
-            _id: null,
-            total: { $sum: 1 },
-            bySeverity: {
-              $push: {
-                k: '$severity',
-                v: 1
-              }
-            },
-            byStatus: {
-              $push: {
-                k: '$status',
-                v: 1
-              }
-            }
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            total: 1,
-            bySeverity: { $arrayToObject: '$bySeverity' },
-            byStatus: { $arrayToObject: '$byStatus' }
-          }
-        }
-      ]);
-
-      res.json(stats[0] || { total: 0, bySeverity: {}, byStatus: {} });
-    } catch (error) {
-      logger.error('Error fetching alert statistics:', error);
-      res.status(500).json({ error: 'Error fetching alert statistics' });
     }
   }
 }; 

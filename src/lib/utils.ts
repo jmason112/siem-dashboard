@@ -5,17 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatNumber(value: number): string {
-  return new Intl.NumberFormat().format(value);
-}
-
-export function generateMockTimeSeriesData(points: number): { timestamp: Date; value: number }[] {
+export function generateMockTimeSeriesData(days: number) {
   const data = [];
   const now = new Date();
   
-  for (let i = points; i > 0; i--) {
+  for (let i = days; i > 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    
     data.push({
-      timestamp: new Date(now.getTime() - i * 60000),
+      timestamp: date,
       value: Math.floor(Math.random() * 100),
     });
   }

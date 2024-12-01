@@ -1,71 +1,166 @@
 import { create } from 'zustand';
-import { format, subDays } from 'date-fns';
-import type { Alert } from '../types';
-import type { AlertFilters } from '../types/alerts';
+import { devtools } from 'zustand/middleware';
+import axios from 'axios';
 
-type AlertStore = {
+export interface Alert {
+  _id: string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical' | 'info';
+  status: 'new' | 'in_progress' | 'resolved' | 'dismissed';
+  source: string;
+  sourceIp?: string;
+  timestamp: string;
+  tags: string[];
+  affectedAssets: string[];
+  assignedTo?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolution?: string;
+}
+
+interface AlertFilters {
+  severity?: string[];
+  status?: string[];
+  startDate?: string;
+  endDate?: string;
+  source?: string[];
+}
+
+interface AlertStats {
+  total: number;
+  bySeverity: Record<string, number>;
+  byStatus: Record<string, number>;
+}
+
+interface AlertStore {
   alerts: Alert[];
+  stats: AlertStats;
+  loading: boolean;
+  error: string | null;
   filters: AlertFilters;
-  selectedAlerts: Set<string>;
+  page: number;
+  totalPages: number;
+  websocket: WebSocket | null;
+  
+  // Actions
+  fetchAlerts: (page?: number) => Promise<void>;
+  fetchStats: () => Promise<void>;
+  updateAlert: (id: string, data: Partial<Alert>) => Promise<void>;
+  deleteAlert: (id: string) => Promise<void>;
   setFilters: (filters: Partial<AlertFilters>) => void;
-  toggleAlertSelection: (id: string) => void;
-  selectAll: () => void;
-  clearSelection: () => void;
-  acknowledgeAlerts: (ids: string[]) => void;
-};
+  connectWebSocket: () => void;
+  disconnectWebSocket: () => void;
+}
 
-export const useAlertStore = create<AlertStore>((set) => ({
-  alerts: Array.from({ length: 20 }, (_, i) => ({
-    id: `alert-${i + 1}`,
-    timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-    severity: ['critical', 'warning', 'info'][Math.floor(Math.random() * 3)] as Alert['severity'],
-    source: ['Firewall', 'IDS', 'System', 'Database', 'Application'][Math.floor(Math.random() * 5)],
-    description: [
-      'Multiple failed login attempts detected',
-      'Unusual network traffic pattern detected',
-      'System resource usage exceeding threshold',
-      'Database connection timeout',
-      'SSL certificate expiring soon',
-    ][Math.floor(Math.random() * 5)],
-    acknowledged: false,
-  })),
-  filters: {
-    severity: null,
-    dateRange: {
-      start: subDays(new Date(), 7),
-      end: new Date(),
-    },
-    status: 'all',
-    search: '',
-  },
-  selectedAlerts: new Set<string>(),
-  setFilters: (newFilters) =>
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters },
-    })),
-  toggleAlertSelection: (id) =>
-    set((state) => {
-      const newSelection = new Set(state.selectedAlerts);
-      if (newSelection.has(id)) {
-        newSelection.delete(id);
-      } else {
-        newSelection.add(id);
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+export const useAlertStore = create<AlertStore>()(
+  devtools(
+    (set, get) => ({
+      alerts: [],
+      stats: { total: 0, bySeverity: {}, byStatus: {} },
+      loading: false,
+      error: null,
+      filters: {},
+      page: 1,
+      totalPages: 1,
+      websocket: null,
+
+      fetchAlerts: async (page = 1) => {
+        set({ loading: true, error: null });
+        try {
+          const { filters } = get();
+          const params = new URLSearchParams();
+          params.append('page', page.toString());
+          
+          if (filters.severity) params.append('severity', filters.severity.join(','));
+          if (filters.status) params.append('status', filters.status.join(','));
+          if (filters.startDate) params.append('startDate', filters.startDate);
+          if (filters.endDate) params.append('endDate', filters.endDate);
+          if (filters.source) params.append('source', filters.source.join(','));
+
+          const response = await axios.get(`${API_URL}/api/alerts?${params}`);
+          set({
+            alerts: response.data.alerts,
+            page: response.data.page,
+            totalPages: response.data.totalPages,
+            loading: false
+          });
+        } catch (error) {
+          set({ 
+            error: 'Failed to fetch alerts',
+            loading: false
+          });
+        }
+      },
+
+      fetchStats: async () => {
+        try {
+          const response = await axios.get(`${API_URL}/api/alerts/stats`);
+          set({ stats: response.data });
+        } catch (error) {
+          set({ error: 'Failed to fetch alert statistics' });
+        }
+      },
+
+      updateAlert: async (id: string, data: Partial<Alert>) => {
+        try {
+          const response = await axios.put(`${API_URL}/api/alerts/${id}`, data);
+          const { alerts } = get();
+          const updatedAlerts = alerts.map(alert => 
+            alert._id === id ? response.data : alert
+          );
+          set({ alerts: updatedAlerts });
+          await get().fetchStats();
+        } catch (error) {
+          set({ error: 'Failed to update alert' });
+        }
+      },
+
+      deleteAlert: async (id: string) => {
+        try {
+          await axios.delete(`${API_URL}/api/alerts/${id}`);
+          const { alerts } = get();
+          set({ alerts: alerts.filter(alert => alert._id !== id) });
+          await get().fetchStats();
+        } catch (error) {
+          set({ error: 'Failed to delete alert' });
+        }
+      },
+
+      setFilters: (newFilters: Partial<AlertFilters>) => {
+        set({ 
+          filters: { ...get().filters, ...newFilters },
+          page: 1
+        });
+        get().fetchAlerts(1);
+      },
+
+      connectWebSocket: () => {
+        const ws = new WebSocket(`${API_URL.replace('http', 'ws')}/ws`);
+        
+        ws.onmessage = (event) => {
+          const newAlert = JSON.parse(event.data);
+          const { alerts } = get();
+          set({ alerts: [newAlert, ...alerts] });
+          get().fetchStats();
+        };
+
+        ws.onclose = () => {
+          setTimeout(() => get().connectWebSocket(), 5000);
+        };
+
+        set({ websocket: ws });
+      },
+
+      disconnectWebSocket: () => {
+        const { websocket } = get();
+        if (websocket) {
+          websocket.close();
+          set({ websocket: null });
+        }
       }
-      return { selectedAlerts: newSelection };
-    }),
-  selectAll: () =>
-    set((state) => ({
-      selectedAlerts: new Set(state.alerts.map((alert) => alert.id)),
-    })),
-  clearSelection: () =>
-    set(() => ({
-      selectedAlerts: new Set(),
-    })),
-  acknowledgeAlerts: (ids) =>
-    set((state) => ({
-      alerts: state.alerts.map((alert) =>
-        ids.includes(alert.id) ? { ...alert, acknowledged: true } : alert
-      ),
-      selectedAlerts: new Set(),
-    })),
-}));
+    })
+  )
+);

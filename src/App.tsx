@@ -1,59 +1,63 @@
-import React, { useState } from 'react';
-import { Header } from './components/layout/Header';
-import { Sidebar } from './components/layout/Sidebar';
-import { SecurityPage } from './pages/SecurityPage';
-import { AlertsPage } from './pages/AlertsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { MetricCard } from './components/dashboard/MetricCard';
-import { AlertsList } from './components/dashboard/AlertsList';
-import { TimeSeriesChart } from './components/dashboard/TimeSeriesChart';
-import { generateMockTimeSeriesData } from './lib/utils';
-import type { Alert, MetricCard as MetricCardType } from './types';
+import React, { useState } from "react";
+import { Header } from "./components/layout/Header";
+import { Sidebar } from "./components/layout/Sidebar";
+import { SecurityPage } from "./pages/SecurityPage";
+import AlertsPage from "./pages/AlertsPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { MetricCard } from "./components/dashboard/MetricCard";
+import { AlertsList } from "./components/dashboard/AlertsList";
+import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
+import { generateMockTimeSeriesData } from "./lib/utils";
+import type { Alert, MetricCard as MetricCardType } from "./types";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'security' | 'alerts' | 'settings'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<
+    "dashboard" | "security" | "alerts" | "settings"
+  >("dashboard");
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [timeSeriesData, setTimeSeriesData] = useState(generateMockTimeSeriesData(30));
+  const [timeSeriesData, setTimeSeriesData] = useState(
+    generateMockTimeSeriesData(30)
+  );
 
   const metrics: MetricCardType[] = [
     {
-      id: '1',
-      title: 'Active Threats',
+      id: "1",
+      title: "Active Threats",
       value: 12,
       change: 25,
-      trend: 'up',
+      trend: "up",
     },
     {
-      id: '2',
-      title: 'System Health',
+      id: "2",
+      title: "System Health",
       value: 98,
       change: 2,
-      trend: 'up',
+      trend: "up",
     },
     {
-      id: '3',
-      title: 'Failed Login Attempts',
+      id: "3",
+      title: "Failed Login Attempts",
       value: 45,
       change: -15,
-      trend: 'down',
+      trend: "down",
     },
     {
-      id: '4',
-      title: 'Network Load',
+      id: "4",
+      title: "Network Load",
       value: 76,
       change: 0,
-      trend: 'neutral',
+      trend: "neutral",
     },
   ];
 
   const renderContent = () => {
     switch (currentPage) {
-      case 'security':
+      case "security":
         return <SecurityPage />;
-      case 'alerts':
+      case "alerts":
         return <AlertsPage />;
-      case 'settings':
+      case "settings":
         return <SettingsPage />;
       default:
         return (
@@ -76,7 +80,9 @@ function App() {
                   onAcknowledge={(id) =>
                     setAlerts((prev) =>
                       prev.map((alert) =>
-                        alert.id === id ? { ...alert, acknowledged: true } : alert
+                        alert.id === id
+                          ? { ...alert, acknowledged: true }
+                          : alert
                       )
                     )
                   }
@@ -96,11 +102,13 @@ function App() {
         onClose={() => setSidebarOpen(false)}
         onNavigate={(page) => setCurrentPage(page)}
       />
-      
-      <main className={`pt-16 transition-all duration-200 ${sidebarOpen ? 'lg:pl-64' : ''}`}>
-        <div className="p-6">
-          {renderContent()}
-        </div>
+
+      <main
+        className={`pt-16 transition-all duration-200 ${
+          sidebarOpen ? "lg:pl-64" : ""
+        }`}
+      >
+        <div className="p-6">{renderContent()}</div>
       </main>
     </div>
   );

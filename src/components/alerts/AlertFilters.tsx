@@ -1,7 +1,8 @@
-import React from 'react';
-import { Filter, X } from 'lucide-react';
-import { format } from 'date-fns';
-import type { AlertFilters } from '../../types/alerts';
+import React from "react";
+import { Filter, X } from "lucide-react";
+import { format } from "date-fns";
+import type { AlertFilters } from "../../types/alerts";
+import type { Alert } from "../../stores/alertStore";
 
 type AlertFiltersProps = {
   filters: AlertFilters;
@@ -10,15 +11,15 @@ type AlertFiltersProps = {
 
 export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
   const severityOptions: Array<{ value: string; label: string }> = [
-    { value: 'critical', label: 'Critical' },
-    { value: 'warning', label: 'Warning' },
-    { value: 'info', label: 'Info' },
+    { value: "critical", label: "Critical" },
+    { value: "warning", label: "Warning" },
+    { value: "info", label: "Info" },
   ];
 
   const statusOptions: Array<{ value: string; label: string }> = [
-    { value: 'all', label: 'All' },
-    { value: 'active', label: 'Active' },
-    { value: 'resolved', label: 'Resolved' },
+    { value: "all", label: "All" },
+    { value: "active", label: "Active" },
+    { value: "resolved", label: "Resolved" },
   ];
 
   return (
@@ -33,8 +34,8 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
             onFilterChange({
               severity: null,
               dateRange: { start: null, end: null },
-              status: 'all',
-              search: '',
+              status: "all",
+              search: "",
             })
           }
           className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -47,10 +48,12 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium">Severity</label>
           <select
-            value={filters.severity?.[0] || ''}
+            value={filters.severity?.[0] || ""}
             onChange={(e) =>
               onFilterChange({
-                severity: e.target.value ? [e.target.value as Alert['severity']] : null,
+                severity: e.target.value
+                  ? [e.target.value as Alert["severity"]]
+                  : null,
               })
             }
             className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
@@ -69,7 +72,9 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
           <select
             value={filters.status}
             onChange={(e) =>
-              onFilterChange({ status: e.target.value as AlertFilters['status'] })
+              onFilterChange({
+                status: e.target.value as AlertFilters["status"],
+              })
             }
             className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm"
           >
@@ -85,7 +90,11 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
           <label className="text-sm font-medium">From</label>
           <input
             type="date"
-            value={filters.dateRange.start ? format(filters.dateRange.start, 'yyyy-MM-dd') : ''}
+            value={
+              filters.dateRange.start
+                ? format(filters.dateRange.start, "yyyy-MM-dd")
+                : ""
+            }
             onChange={(e) =>
               onFilterChange({
                 dateRange: {
@@ -102,7 +111,11 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
           <label className="text-sm font-medium">To</label>
           <input
             type="date"
-            value={filters.dateRange.end ? format(filters.dateRange.end, 'yyyy-MM-dd') : ''}
+            value={
+              filters.dateRange.end
+                ? format(filters.dateRange.end, "yyyy-MM-dd")
+                : ""
+            }
             onChange={(e) =>
               onFilterChange({
                 dateRange: {
@@ -126,7 +139,7 @@ export function AlertFilters({ filters, onFilterChange }: AlertFiltersProps) {
         />
         {filters.search && (
           <button
-            onClick={() => onFilterChange({ search: '' })}
+            onClick={() => onFilterChange({ search: "" })}
             className="absolute right-3 top-1/2 -translate-y-1/2"
           >
             <X className="h-4 w-4 text-gray-400" />

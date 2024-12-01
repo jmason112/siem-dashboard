@@ -2,11 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import alertRoutes from './routes/alertRoutes';
 import { config } from './config/config';
 import { logger } from './config/logger';
-import { createTestAlerts } from './models/Alert';
+import { createTestAlerts, Alert } from './models/Alert';
 
 const app = express();
 const server = createServer(app);
@@ -15,6 +15,9 @@ const wss = new WebSocketServer({
   path: '/ws'
 });
 
+// Keep track of connected clients
+const clients = new Set<WebSocket>();
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -22,9 +25,36 @@ app.use(express.json());
 // Routes
 app.use('/api/alerts', alertRoutes);
 
+// Broadcast to all connected clients
+const broadcast = (data: any) => {
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+};
+
+// Agent alert endpoint
+app.post('/api/agent/alert', async (req, res) => {
+  try {
+    const alertData = req.body;
+    const alert = new Alert(alertData);
+    await alert.save();
+    
+    // Broadcast new alert to all clients
+    broadcast(alert);
+    
+    res.status(201).json(alert);
+  } catch (error) {
+    logger.error('Error processing agent alert:', error);
+    res.status(500).json({ error: 'Error processing alert' });
+  }
+});
+
 // WebSocket connection handling
 wss.on('connection', (ws) => {
   logger.info('Client connected to WebSocket');
+  clients.add(ws);
 
   // Send initial heartbeat
   ws.send(JSON.stringify({ type: 'heartbeat' }));
@@ -42,6 +72,7 @@ wss.on('connection', (ws) => {
   
   ws.on('close', () => {
     clearInterval(heartbeat);
+    clients.delete(ws);
     logger.info('Client disconnected from WebSocket');
   });
 });

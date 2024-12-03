@@ -36,9 +36,9 @@ export const ComplianceDashboard: React.FC = () => {
     complianceLoading,
     updateComplianceStatus,
     complianceFilters,
-    page,
-    totalPages,
-    setPage,
+    compliancePage,
+    complianceTotalPages,
+    setCompliancePage,
   } = useSecurityStore();
 
   const handleStatusChange = async (id: string, status: string) => {
@@ -176,22 +176,22 @@ export const ComplianceDashboard: React.FC = () => {
           </Table>
         )}
         {/* Pagination */}
-        {totalPages > 1 && (
+        {complianceTotalPages > 1 && (
           <div className="flex justify-center items-center space-x-2 p-4">
             <Button
-              onClick={() => setPage(page - 1)}
-              disabled={page === 1}
+              onClick={() => setCompliancePage(compliancePage - 1)}
+              disabled={compliancePage === 1}
               variant="outline"
               size="sm"
             >
               Previous
             </Button>
             <span className="text-sm text-gray-600">
-              Page {page} of {totalPages}
+              Page {compliancePage} of {complianceTotalPages}
             </span>
             <Button
-              onClick={() => setPage(page + 1)}
-              disabled={page === totalPages}
+              onClick={() => setCompliancePage(compliancePage + 1)}
+              disabled={compliancePage === complianceTotalPages}
               variant="outline"
               size="sm"
             >

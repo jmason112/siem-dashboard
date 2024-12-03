@@ -22,6 +22,8 @@ interface SecurityState {
     status?: string[];
     search?: string;
   };
+  vulnerabilityPage: number;
+  vulnerabilityTotalPages: number;
   
   // Compliance
   compliance: Compliance[];
@@ -34,10 +36,8 @@ interface SecurityState {
     riskLevel?: string[];
     search?: string;
   };
-  
-  // Pagination
-  page: number;
-  totalPages: number;
+  compliancePage: number;
+  complianceTotalPages: number;
   
   // Actions
   connectWebSocket: () => void;
@@ -50,7 +50,8 @@ interface SecurityState {
   updateComplianceStatus: (id: string, status: string) => Promise<void>;
   setVulnerabilityFilters: (filters: Partial<SecurityState['vulnerabilityFilters']>) => void;
   setComplianceFilters: (filters: Partial<SecurityState['complianceFilters']>) => void;
-  setPage: (page: number) => void;
+  setVulnerabilityPage: (page: number) => void;
+  setCompliancePage: (page: number) => void;
 }
 
 export const useSecurityStore = create<SecurityState>((set, get) => ({
@@ -62,13 +63,15 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   vulnerabilityLoading: false,
   vulnerabilityError: null,
   vulnerabilityFilters: {},
+  vulnerabilityPage: 1,
+  vulnerabilityTotalPages: 1,
   compliance: [],
   complianceStats: null,
   complianceLoading: false,
   complianceError: null,
   complianceFilters: {},
-  page: 1,
-  totalPages: 1,
+  compliancePage: 1,
+  complianceTotalPages: 1,
   
   // WebSocket actions
   connectWebSocket: () => {
@@ -83,12 +86,10 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       const data = JSON.parse(event.data);
       
       if (data.type === 'vulnerability_update') {
-        // Update vulnerabilities when new scan results arrive
         const { fetchVulnerabilities, fetchVulnerabilityStats } = get();
         fetchVulnerabilities();
         fetchVulnerabilityStats();
       } else if (data.type === 'compliance_update') {
-        // Update compliance when new check results arrive
         const { fetchCompliance, fetchComplianceStats } = get();
         fetchCompliance();
         fetchComplianceStats();
@@ -115,9 +116,9 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     }
   },
   
-  // Actions
+  // Vulnerability actions
   fetchVulnerabilities: async () => {
-    const { vulnerabilityFilters, page } = get();
+    const { vulnerabilityFilters, vulnerabilityPage } = get();
     set({ vulnerabilityLoading: true, vulnerabilityError: null });
     
     try {
@@ -125,13 +126,13 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       if (vulnerabilityFilters.severity?.length) params.append('severity', vulnerabilityFilters.severity.join(','));
       if (vulnerabilityFilters.status?.length) params.append('status', vulnerabilityFilters.status.join(','));
       if (vulnerabilityFilters.search) params.append('search', vulnerabilityFilters.search);
-      params.append('page', page.toString());
+      params.append('page', vulnerabilityPage.toString());
       
       const response = await axios.get(`/api/security/vulnerabilities?${params}`);
       
       set({ 
         vulnerabilities: response.data.vulnerabilities,
-        totalPages: response.data.totalPages,
+        vulnerabilityTotalPages: response.data.totalPages,
         vulnerabilityLoading: false 
       });
     } catch (error) {
@@ -143,24 +144,14 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     }
   },
   
-  fetchVulnerabilityStats: async () => {
-    try {
-      const response = await axios.get('/api/security/vulnerabilities/stats');
-      set({ vulnerabilityStats: response.data });
-    } catch (error) {
-      console.error('Error fetching vulnerability stats:', error);
-      set({ vulnerabilityError: 'Error fetching vulnerability statistics' });
-    }
-  },
-  
+  // Compliance actions
   fetchCompliance: async () => {
-    const { complianceFilters, page } = get();
+    const { complianceFilters, compliancePage } = get();
     set({ complianceLoading: true, complianceError: null });
     
     try {
       const params = new URLSearchParams();
       
-      // Handle array filters
       if (complianceFilters.framework?.length) {
         params.append('framework', complianceFilters.framework.join(','));
       }
@@ -170,20 +161,17 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       if (complianceFilters.riskLevel?.length) {
         params.append('risk_level', complianceFilters.riskLevel.join(','));
       }
-      
-      // Handle search
       if (complianceFilters.search) {
-        params.append('control_name', complianceFilters.search);
+        params.append('search', complianceFilters.search);
       }
       
-      params.append('page', page.toString());
+      params.append('page', compliancePage.toString());
       
-      console.log('Fetching compliance with params:', params.toString()); // Debug log
       const response = await axios.get(`/api/security/compliance?${params}`);
       
       set({ 
         compliance: response.data.compliance,
-        totalPages: response.data.totalPages,
+        complianceTotalPages: response.data.totalPages,
         complianceLoading: false 
       });
     } catch (error) {
@@ -192,6 +180,17 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
         complianceError: 'Error fetching compliance data',
         complianceLoading: false 
       });
+    }
+  },
+  
+  // Other actions
+  fetchVulnerabilityStats: async () => {
+    try {
+      const response = await axios.get('/api/security/vulnerabilities/stats');
+      set({ vulnerabilityStats: response.data });
+    } catch (error) {
+      console.error('Error fetching vulnerability stats:', error);
+      set({ vulnerabilityError: 'Error fetching vulnerability statistics' });
     }
   },
   
@@ -236,7 +235,6 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   setVulnerabilityFilters: (newFilters) => {
     const currentFilters = get().vulnerabilityFilters;
     
-    // Process each filter type, removing if 'all' is selected
     const processedFilters = {
       ...currentFilters,
       ...newFilters
@@ -256,7 +254,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
     set({ 
       vulnerabilityFilters: processedFilters,
-      page: 1
+      vulnerabilityPage: 1
     });
 
     const { fetchVulnerabilities, fetchVulnerabilityStats } = get();
@@ -267,9 +265,9 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   setComplianceFilters: (newFilters) => {
     const currentFilters = get().complianceFilters;
     
-    // Process each filter type, removing if 'all' is selected
     const processedFilters = {
-      ...currentFilters
+      ...currentFilters,
+      ...newFilters
     };
 
     if (newFilters.status) {
@@ -290,16 +288,21 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
 
     set({ 
       complianceFilters: processedFilters,
-      page: 1
+      compliancePage: 1
     });
 
     const { fetchCompliance, fetchComplianceStats } = get();
     fetchCompliance();
     fetchComplianceStats();
   },
-  
-  setPage: (newPage: number) => {
-    set({ page: newPage });
+
+  setVulnerabilityPage: (page: number) => {
+    set({ vulnerabilityPage: page });
     get().fetchVulnerabilities();
+  },
+
+  setCompliancePage: (page: number) => {
+    set({ compliancePage: page });
+    get().fetchCompliance();
   }
 })); 

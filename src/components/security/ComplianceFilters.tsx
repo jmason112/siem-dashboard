@@ -18,10 +18,10 @@ export function ComplianceFilters() {
 
   const clearFilters = () => {
     setComplianceFilters({
-      status: undefined,
-      framework: undefined,
-      riskLevel: undefined,
-      search: undefined,
+      status: ["all"],
+      framework: ["all"],
+      riskLevel: ["all"],
+      search: "",
     });
   };
 

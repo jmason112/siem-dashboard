@@ -57,6 +57,56 @@ export const securityController = {
     }
   },
 
+  async updateVulnerabilityStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const vulnerability = await Vulnerability.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!vulnerability) {
+        return res.status(404).json({ error: 'Vulnerability not found' });
+      }
+
+      // Broadcast update to all connected clients
+      broadcast({ type: 'vulnerability_update' });
+
+      res.json(vulnerability);
+    } catch (error) {
+      logger.error('Error updating vulnerability status:', error);
+      res.status(500).json({ error: 'Error updating vulnerability status' });
+    }
+  },
+
+  async updateComplianceStatus(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const compliance = await Compliance.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!compliance) {
+        return res.status(404).json({ error: 'Compliance record not found' });
+      }
+
+      // Broadcast update to all connected clients
+      broadcast({ type: 'compliance_update' });
+
+      res.json(compliance);
+    } catch (error) {
+      logger.error('Error updating compliance status:', error);
+      res.status(500).json({ error: 'Error updating compliance status' });
+    }
+  },
+
   async getVulnerabilityStats(req: Request, res: Response) {
     try {
       const total = await Vulnerability.countDocuments();

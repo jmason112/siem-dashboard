@@ -42,32 +42,45 @@ export function SecuritySummary() {
     },
   ];
 
-  // Calculate compliance score
+  // Calculate compliance score based on actual compliance data
   const calculateComplianceScore = () => {
-    if (!complianceStats?.byFramework) return 0;
+    if (!complianceStats?.byFramework?.length) return 0;
 
     const totalControls = complianceStats.byFramework.reduce(
-      (acc: number, curr: { total: number }) => acc + curr.total,
-      0
-    );
-    const compliantControls = complianceStats.byFramework.reduce(
-      (acc: number, curr: { compliant: number }) => acc + curr.compliant,
+      (acc: number, framework) => acc + framework.total,
       0
     );
 
-    return totalControls
+    const compliantControls = complianceStats.byFramework.reduce(
+      (acc: number, framework) => acc + (framework.compliant || 0),
+      0
+    );
+
+    return totalControls > 0
       ? Math.round((compliantControls / totalControls) * 100)
       : 0;
   };
 
-  const complianceScore = calculateComplianceScore();
+  // Calculate number of non-compliant policies
+  const calculateNonCompliantPolicies = () => {
+    if (!complianceStats?.byFramework?.length) return 0;
 
-  // Calculate non-compliant policies
-  const nonCompliantPolicies =
-    complianceStats?.byFramework?.reduce(
-      (acc: number, curr: { nonCompliant: number }) => acc + curr.nonCompliant,
+    return complianceStats.byFramework.reduce(
+      (acc: number, framework) => acc + (framework.nonCompliant || 0),
       0
-    ) || 0;
+    );
+  };
+
+  const complianceScore = calculateComplianceScore();
+  const nonCompliantPolicies = calculateNonCompliantPolicies();
+
+  // Get compliance status text
+  const getComplianceStatusText = (score: number) => {
+    if (score >= 90) return "Excellent compliance status";
+    if (score >= 75) return "Good compliance status";
+    if (score >= 60) return "Needs improvement";
+    return "Critical attention required";
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -129,18 +142,18 @@ export function SecuritySummary() {
               </div>
               <Progress value={complianceScore} className="h-2" />
               <p className="text-xs text-muted-foreground">
-                {complianceScore >= 90
-                  ? "Excellent compliance status"
-                  : complianceScore >= 75
-                  ? "Good compliance status"
-                  : "Needs improvement"}
+                {getComplianceStatusText(complianceScore)}
               </p>
             </div>
             <div className="mt-4 rounded-lg bg-muted p-2">
               <div className="flex items-center gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 <span>
-                  {nonCompliantPolicies} compliance policies require review
+                  {nonCompliantPolicies} compliance{" "}
+                  {nonCompliantPolicies === 1
+                    ? "policy requires"
+                    : "policies require"}{" "}
+                  review
                 </span>
               </div>
             </div>

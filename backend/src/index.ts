@@ -3,11 +3,14 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import { Server } from 'socket.io';
 import alertRoutes from './routes/alertRoutes';
 import securityRoutes from './routes/securityRoutes';
 import { config } from './config/config';
 import { logger } from './config/logger';
 import { createTestAlerts, Alert } from './models/Alert';
+import { Vulnerability } from './models/Vulnerability';
+import { Compliance } from './models/Compliance';
 
 const app = express();
 const server = createServer(app);
@@ -76,6 +79,72 @@ wss.on('connection', (ws) => {
     clearInterval(heartbeat);
     clients.delete(ws);
     logger.info('Client disconnected from WebSocket');
+  });
+});
+
+// Socket.IO setup
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"]
+  },
+  path: '/socket.io'
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  logger.info('Client connected to Socket.IO');
+
+  socket.on('getVulnerabilities', async (filters) => {
+    try {
+      const query: any = {};
+      
+      if (filters?.severity?.[0] && filters.severity[0] !== 'all') {
+        query.severity = filters.severity[0];
+      }
+      if (filters?.status?.[0] && filters.status[0] !== 'all') {
+        query.status = filters.status[0];
+      }
+
+      const vulnerabilities = await Vulnerability.find(query)
+        .sort({ cvss_score: -1 });
+
+      socket.emit('vulnerabilities', vulnerabilities);
+    } catch (error) {
+      logger.error('Error fetching vulnerabilities:', error);
+      socket.emit('error', { message: 'Error fetching vulnerabilities' });
+    }
+  });
+
+  socket.on('getVulnerabilityStats', async () => {
+    try {
+      const total = await Vulnerability.countDocuments();
+      
+      const bySeverity = await Vulnerability.aggregate([
+        { $group: { _id: '$severity', count: { $sum: 1 } } }
+      ]).then(results => 
+        results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
+      );
+
+      const byStatus = await Vulnerability.aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]).then(results => 
+        results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
+      );
+
+      socket.emit('vulnerabilityStats', {
+        total,
+        bySeverity,
+        byStatus
+      });
+    } catch (error) {
+      logger.error('Error fetching vulnerability stats:', error);
+      socket.emit('error', { message: 'Error fetching vulnerability statistics' });
+    }
+  });
+
+  socket.on('disconnect', () => {
+    logger.info('Client disconnected from Socket.IO');
   });
 });
 

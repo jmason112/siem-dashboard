@@ -216,10 +216,55 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   },
   
   setFilters: (newFilters) => {
-    set((state) => ({
-      filters: { ...state.filters, ...newFilters },
+    const currentFilters = get().filters;
+    
+    // Create new filters object, properly handling 'all' values
+    const processedFilters = {
+      ...currentFilters // Start with current filters as base
+    };
+
+    // Process each filter type
+    if (newFilters.severity) {
+      if (newFilters.severity[0] === 'all') {
+        delete processedFilters.severity;
+      } else {
+        processedFilters.severity = newFilters.severity;
+      }
+    }
+    
+    if (newFilters.status) {
+      if (newFilters.status[0] === 'all') {
+        delete processedFilters.status;
+      } else {
+        processedFilters.status = newFilters.status;
+      }
+    }
+    
+    if (newFilters.framework) {
+      if (newFilters.framework[0] === 'all') {
+        delete processedFilters.framework;
+      } else {
+        processedFilters.framework = newFilters.framework;
+      }
+    }
+    
+    if (newFilters.riskLevel) {
+      if (newFilters.riskLevel[0] === 'all') {
+        delete processedFilters.riskLevel;
+      } else {
+        processedFilters.riskLevel = newFilters.riskLevel;
+      }
+    }
+
+    set({ 
+      filters: processedFilters,
       page: 1 // Reset to first page when filters change
-    }));
+    });
+
+    // Refresh data with new filters
+    const { fetchVulnerabilities, fetchVulnerabilityStats } = get();
+    fetchVulnerabilities();
+    fetchVulnerabilityStats();
   },
   
   setPage: (page) => set({ page })

@@ -4,6 +4,7 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { SecurityPage } from "./pages/SecurityPage";
 import AlertsPage from "./pages/AlertsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { AgentManagementPage } from "./pages/AgentManagementPage";
 import { MetricCard } from "./components/dashboard/MetricCard";
 import { AlertsList } from "./components/dashboard/AlertsList";
 import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
@@ -14,7 +15,7 @@ import type { Alert } from "./types";
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState<
-    "dashboard" | "security" | "alerts" | "settings"
+    "dashboard" | "security" | "alerts" | "settings" | "agents"
   >("dashboard");
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -151,6 +152,8 @@ function App() {
         return <AlertsPage />;
       case "settings":
         return <SettingsPage />;
+      case "agents":
+        return <AgentManagementPage />;
       default:
         return (
           <>

@@ -7,6 +7,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { MetricCard } from "./components/dashboard/MetricCard";
 import { AlertsList } from "./components/dashboard/AlertsList";
 import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
+import { SecuritySummary } from "./components/security/SecuritySummary";
 import axios from "axios";
 import type { Alert } from "./types";
 
@@ -158,7 +159,7 @@ function App() {
                 <MetricCard key={metric.id} metric={metric} />
               ))}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2">
                 <TimeSeriesChart
                   data={timeSeriesData}
@@ -171,6 +172,9 @@ function App() {
                   onAcknowledge={handleAlertAcknowledge}
                 />
               </div>
+            </div>
+            <div className="mb-6">
+              <SecuritySummary />
             </div>
           </>
         );

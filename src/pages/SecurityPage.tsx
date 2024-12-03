@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useSecurityStore } from "../stores/securityStore";
 import { VulnerabilityDashboard } from "../components/security/VulnerabilityDashboard";
 import { ComplianceDashboard } from "../components/security/ComplianceDashboard";
+import { SecuritySummary } from "../components/security/SecuritySummary";
 import {
   Tabs,
   TabsContent,
@@ -91,6 +92,10 @@ export const SecurityPage: React.FC = () => {
             "Refresh"
           )}
         </Button>
+      </div>
+
+      <div className="mb-6">
+        <SecuritySummary />
       </div>
 
       <Tabs defaultValue="vulnerabilities" className="space-y-4">

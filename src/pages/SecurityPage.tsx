@@ -1,117 +1,112 @@
-import React, { useState } from 'react';
-import { SecurityControls } from '../components/security/SecurityControls';
-import { VulnerabilityList } from '../components/security/VulnerabilityList';
-import { ComplianceOverview } from '../components/security/ComplianceOverview';
-import type { SecurityControl, VulnerabilityScan, ComplianceStatus } from '../types/security';
+import React, { useEffect } from "react";
+import { useSecurityStore } from "../stores/securityStore";
+import { VulnerabilityDashboard } from "../components/security/VulnerabilityDashboard";
+import { ComplianceDashboard } from "../components/security/ComplianceDashboard";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Card } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Loader2 } from "lucide-react";
 
-export function SecurityPage() {
-  const [controls] = useState<SecurityControl[]>([
-    {
-      id: '1',
-      name: 'Firewall Rules',
-      status: 'enabled',
-      lastUpdated: new Date(),
-      description: 'Network firewall rules and policies',
-      category: 'firewall',
-    },
-    {
-      id: '2',
-      name: 'Data Encryption',
-      status: 'enabled',
-      lastUpdated: new Date(),
-      description: 'End-to-end encryption for sensitive data',
-      category: 'encryption',
-    },
-    {
-      id: '3',
-      name: 'Access Control',
-      status: 'warning',
-      lastUpdated: new Date(),
-      description: 'Role-based access control policies',
-      category: 'access',
-    },
-    {
-      id: '4',
-      name: 'Security Monitoring',
-      status: 'enabled',
-      lastUpdated: new Date(),
-      description: '24/7 security event monitoring',
-      category: 'monitoring',
-    },
-  ]);
+export const SecurityPage: React.FC = () => {
+  const {
+    fetchVulnerabilities,
+    fetchVulnerabilityStats,
+    fetchCompliance,
+    fetchComplianceStats,
+    vulnerabilityLoading,
+    complianceLoading,
+    vulnerabilityError,
+    complianceError,
+    connectWebSocket,
+    disconnectWebSocket,
+  } = useSecurityStore();
 
-  const [vulnerabilities] = useState<VulnerabilityScan[]>([
-    {
-      id: '1',
-      severity: 'critical',
-      asset: 'Web Server',
-      description: 'CVE-2024-1234: Remote Code Execution Vulnerability',
-      discoveredAt: new Date(),
-      status: 'open',
-    },
-    {
-      id: '2',
-      severity: 'high',
-      asset: 'Database Server',
-      description: 'Outdated SSL certificates detected',
-      discoveredAt: new Date(),
-      status: 'in_progress',
-    },
-    {
-      id: '3',
-      severity: 'medium',
-      asset: 'Load Balancer',
-      description: 'Weak cipher suites enabled',
-      discoveredAt: new Date(),
-      status: 'resolved',
-    },
-  ]);
+  useEffect(() => {
+    // Initial data fetch
+    const fetchData = async () => {
+      await Promise.all([
+        fetchVulnerabilities(),
+        fetchVulnerabilityStats(),
+        fetchCompliance(),
+        fetchComplianceStats(),
+      ]);
+    };
 
-  const [compliance] = useState<ComplianceStatus[]>([
-    {
-      framework: 'ISO 27001',
-      status: 'compliant',
-      lastAssessment: new Date(),
-      controls: {
-        total: 100,
-        passed: 98,
-        failed: 2,
-      },
-    },
-    {
-      framework: 'SOC 2',
-      status: 'partial',
-      lastAssessment: new Date(),
-      controls: {
-        total: 75,
-        passed: 65,
-        failed: 10,
-      },
-    },
-    {
-      framework: 'GDPR',
-      status: 'compliant',
-      lastAssessment: new Date(),
-      controls: {
-        total: 50,
-        passed: 50,
-        failed: 0,
-      },
-    },
-  ]);
+    // Connect WebSocket and fetch initial data
+    connectWebSocket();
+    fetchData();
 
-  const handleToggleControl = (id: string) => {
-    // In a real application, this would update the backend
-    console.log('Toggling control:', id);
+    // Cleanup
+    return () => {
+      disconnectWebSocket();
+    };
+  }, []);
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchVulnerabilities(),
+      fetchVulnerabilityStats(),
+      fetchCompliance(),
+      fetchComplianceStats(),
+    ]);
   };
 
+  if (vulnerabilityError || complianceError) {
+    return (
+      <Card className="m-4 p-4">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-red-600">
+            Error Loading Security Data
+          </h2>
+          <p className="text-gray-600 mt-2">
+            {vulnerabilityError || complianceError}
+          </p>
+          <Button onClick={handleRefresh} className="mt-4">
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SecurityControls controls={controls} onToggleControl={handleToggleControl} />
-        <VulnerabilityList vulnerabilities={vulnerabilities} />
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Security Dashboard</h1>
+        <Button
+          onClick={handleRefresh}
+          disabled={vulnerabilityLoading || complianceLoading}
+        >
+          {vulnerabilityLoading || complianceLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Refreshing...
+            </>
+          ) : (
+            "Refresh"
+          )}
+        </Button>
       </div>
-      <ComplianceOverview compliance={compliance} />
+
+      <Tabs defaultValue="vulnerabilities" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="vulnerabilities">Vulnerabilities</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="vulnerabilities">
+          <VulnerabilityDashboard />
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <ComplianceDashboard />
+        </TabsContent>
+      </Tabs>
     </div>
   );
-}
+};

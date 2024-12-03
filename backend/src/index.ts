@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import alertRoutes from './routes/alertRoutes';
+import securityRoutes from './routes/securityRoutes';
 import { config } from './config/config';
 import { logger } from './config/logger';
 import { createTestAlerts, Alert } from './models/Alert';
@@ -20,13 +21,14 @@ const clients = new Set<WebSocket>();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Routes
 app.use('/api/alerts', alertRoutes);
+app.use('/api/security', securityRoutes);
 
 // Broadcast to all connected clients
-const broadcast = (data: any) => {
+export const broadcast = (data: any) => {
   clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(JSON.stringify(data));
@@ -80,10 +82,13 @@ wss.on('connection', (ws) => {
 // Connect to MongoDB
 mongoose.connect(config.mongoUri)
   .then(async () => {
-    logger.info('Connected to MongoDB');
+    logger.info('Connected to MongoDB at:', config.mongoUri);
     
-    // Create test alerts
-    await createTestAlerts();
+    // Log the collections
+    if (mongoose.connection.db) {
+      const collections = await mongoose.connection.db.collections();
+      logger.info('Available collections:', collections.map(c => c.collectionName));
+    }
     
     // Start server
     server.listen(config.port, () => {

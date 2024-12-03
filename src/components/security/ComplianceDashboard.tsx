@@ -12,6 +12,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
+import { ComplianceFilters } from "./ComplianceFilters";
 
 const statusColors = {
   compliant:
@@ -34,7 +35,7 @@ export const ComplianceDashboard: React.FC = () => {
     complianceStats,
     complianceLoading,
     updateComplianceStatus,
-    setFilters,
+    complianceFilters,
     page,
     totalPages,
     setPage,
@@ -43,6 +44,16 @@ export const ComplianceDashboard: React.FC = () => {
   const handleStatusChange = async (id: string, status: string) => {
     await updateComplianceStatus(id, status);
   };
+
+  // Filter compliance data based on search
+  const filteredCompliance = compliance?.filter((item) => {
+    if (complianceFilters.search) {
+      return item.control_name
+        .toLowerCase()
+        .includes(complianceFilters.search.toLowerCase());
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -91,6 +102,9 @@ export const ComplianceDashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* Filters */}
+      <ComplianceFilters />
+
       {/* Compliance Table */}
       <Card>
         <div className="p-4 border-b">
@@ -100,7 +114,7 @@ export const ComplianceDashboard: React.FC = () => {
           <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : !compliance?.length ? (
+        ) : !filteredCompliance?.length ? (
           <div className="text-center py-8 text-gray-500">
             No compliance data found
           </div>
@@ -117,7 +131,7 @@ export const ComplianceDashboard: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {compliance.map((control) => (
+              {filteredCompliance.map((control) => (
                 <TableRow key={control._id}>
                   <TableCell>{control.framework}</TableCell>
                   <TableCell>

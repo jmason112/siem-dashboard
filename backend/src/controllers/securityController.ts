@@ -92,16 +92,24 @@ export const securityController = {
         framework,
         status,
         risk_level,
+        search,
         page = 1,
         limit = 10
       } = req.query;
 
       const query: any = {};
-      if (framework) query.framework = framework;
-      if (status) query.status = status;
-      if (risk_level) query.risk_level = risk_level;
+      
+      // Handle array parameters
+      if (framework) query.framework = (framework as string).split(',');
+      if (status) query.status = (status as string).split(',');
+      if (risk_level) query.risk_level = (risk_level as string).split(',');
+      
+      // Simple search on control_name
+      if (search) {
+        query.control_name = new RegExp(search as string, 'i');
+      }
 
-      logger.info('Fetching compliance with query:', query);
+      console.log('Search query:', query); // Debug log
 
       const compliance = await Compliance.find(query)
         .sort({ next_check: 1 })
@@ -109,9 +117,6 @@ export const securityController = {
         .limit(Number(limit));
 
       const total = await Compliance.countDocuments(query);
-
-      logger.info(`Found ${compliance.length} compliance records out of ${total} total`);
-      logger.debug('Compliance records:', JSON.stringify(compliance, null, 2));
 
       res.json({
         compliance,

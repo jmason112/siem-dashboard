@@ -17,19 +17,21 @@ interface SecurityState {
   vulnerabilityStats: VulnerabilityStats | null;
   vulnerabilityLoading: boolean;
   vulnerabilityError: string | null;
+  vulnerabilityFilters: {
+    severity?: string[];
+    status?: string[];
+  };
   
   // Compliance
   compliance: Compliance[];
   complianceStats: ComplianceStats | null;
   complianceLoading: boolean;
   complianceError: string | null;
-  
-  // Filters
-  filters: {
-    severity?: string[];
+  complianceFilters: {
     status?: string[];
     framework?: string[];
     riskLevel?: string[];
+    search?: string;
   };
   
   // Pagination
@@ -45,7 +47,8 @@ interface SecurityState {
   fetchComplianceStats: () => Promise<void>;
   updateVulnerabilityStatus: (id: string, status: string) => Promise<void>;
   updateComplianceStatus: (id: string, status: string) => Promise<void>;
-  setFilters: (filters: Partial<SecurityState['filters']>) => void;
+  setVulnerabilityFilters: (filters: Partial<SecurityState['vulnerabilityFilters']>) => void;
+  setComplianceFilters: (filters: Partial<SecurityState['complianceFilters']>) => void;
   setPage: (page: number) => void;
 }
 
@@ -57,11 +60,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   vulnerabilityStats: null,
   vulnerabilityLoading: false,
   vulnerabilityError: null,
+  vulnerabilityFilters: {},
   compliance: [],
   complianceStats: null,
   complianceLoading: false,
   complianceError: null,
-  filters: {},
+  complianceFilters: {},
   page: 1,
   totalPages: 1,
   
@@ -112,18 +116,16 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   
   // Actions
   fetchVulnerabilities: async () => {
-    const { filters, page } = get();
+    const { vulnerabilityFilters, page } = get();
     set({ vulnerabilityLoading: true, vulnerabilityError: null });
     
     try {
       const params = new URLSearchParams();
-      if (filters.severity?.length) params.append('severity', filters.severity.join(','));
-      if (filters.status?.length) params.append('status', filters.status.join(','));
+      if (vulnerabilityFilters.severity?.length) params.append('severity', vulnerabilityFilters.severity.join(','));
+      if (vulnerabilityFilters.status?.length) params.append('status', vulnerabilityFilters.status.join(','));
       params.append('page', page.toString());
       
-      console.log('Fetching vulnerabilities with params:', params.toString());
       const response = await axios.get(`/api/security/vulnerabilities?${params}`);
-      console.log('Received vulnerabilities:', response.data);
       
       set({ 
         vulnerabilities: response.data.vulnerabilities,
@@ -150,18 +152,32 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   },
   
   fetchCompliance: async () => {
-    const { filters, page } = get();
+    const { complianceFilters, page } = get();
     set({ complianceLoading: true, complianceError: null });
     
     try {
       const params = new URLSearchParams();
-      if (filters.framework?.length) params.append('framework', filters.framework.join(','));
-      if (filters.riskLevel?.length) params.append('risk_level', filters.riskLevel.join(','));
+      
+      // Handle array filters
+      if (complianceFilters.framework?.length) {
+        params.append('framework', complianceFilters.framework.join(','));
+      }
+      if (complianceFilters.status?.length) {
+        params.append('status', complianceFilters.status.join(','));
+      }
+      if (complianceFilters.riskLevel?.length) {
+        params.append('risk_level', complianceFilters.riskLevel.join(','));
+      }
+      
+      // Handle search
+      if (complianceFilters.search) {
+        params.append('control_name', complianceFilters.search);
+      }
+      
       params.append('page', page.toString());
       
-      console.log('Fetching compliance with params:', params.toString());
+      console.log('Fetching compliance with params:', params.toString()); // Debug log
       const response = await axios.get(`/api/security/compliance?${params}`);
-      console.log('Received compliance data:', response.data);
       
       set({ 
         compliance: response.data.compliance,
@@ -215,56 +231,64 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     }
   },
   
-  setFilters: (newFilters) => {
-    const currentFilters = get().filters;
+  setVulnerabilityFilters: (newFilters) => {
+    const currentFilters = get().vulnerabilityFilters;
     
-    // Create new filters object, properly handling 'all' values
+    // Process each filter type, removing if 'all' is selected
     const processedFilters = {
-      ...currentFilters // Start with current filters as base
+      ...currentFilters
     };
 
-    // Process each filter type
     if (newFilters.severity) {
-      if (newFilters.severity[0] === 'all') {
-        delete processedFilters.severity;
-      } else {
-        processedFilters.severity = newFilters.severity;
-      }
+      processedFilters.severity = newFilters.severity[0] === 'all' ? undefined : newFilters.severity;
     }
     
     if (newFilters.status) {
-      if (newFilters.status[0] === 'all') {
-        delete processedFilters.status;
-      } else {
-        processedFilters.status = newFilters.status;
-      }
-    }
-    
-    if (newFilters.framework) {
-      if (newFilters.framework[0] === 'all') {
-        delete processedFilters.framework;
-      } else {
-        processedFilters.framework = newFilters.framework;
-      }
-    }
-    
-    if (newFilters.riskLevel) {
-      if (newFilters.riskLevel[0] === 'all') {
-        delete processedFilters.riskLevel;
-      } else {
-        processedFilters.riskLevel = newFilters.riskLevel;
-      }
+      processedFilters.status = newFilters.status[0] === 'all' ? undefined : newFilters.status;
     }
 
     set({ 
-      filters: processedFilters,
-      page: 1 // Reset to first page when filters change
+      vulnerabilityFilters: processedFilters,
+      page: 1
     });
 
-    // Refresh data with new filters
     const { fetchVulnerabilities, fetchVulnerabilityStats } = get();
     fetchVulnerabilities();
     fetchVulnerabilityStats();
+  },
+  
+  setComplianceFilters: (newFilters) => {
+    const currentFilters = get().complianceFilters;
+    
+    // Process each filter type, removing if 'all' is selected
+    const processedFilters = {
+      ...currentFilters
+    };
+
+    if (newFilters.status) {
+      processedFilters.status = newFilters.status[0] === 'all' ? undefined : newFilters.status;
+    }
+    
+    if (newFilters.framework) {
+      processedFilters.framework = newFilters.framework[0] === 'all' ? undefined : newFilters.framework;
+    }
+    
+    if (newFilters.riskLevel) {
+      processedFilters.riskLevel = newFilters.riskLevel[0] === 'all' ? undefined : newFilters.riskLevel;
+    }
+
+    if (newFilters.search !== undefined) {
+      processedFilters.search = newFilters.search || undefined;
+    }
+
+    set({ 
+      complianceFilters: processedFilters,
+      page: 1
+    });
+
+    const { fetchCompliance, fetchComplianceStats } = get();
+    fetchCompliance();
+    fetchComplianceStats();
   },
   
   setPage: (page) => set({ page })

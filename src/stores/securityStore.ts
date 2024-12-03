@@ -20,6 +20,7 @@ interface SecurityState {
   vulnerabilityFilters: {
     severity?: string[];
     status?: string[];
+    search?: string;
   };
   
   // Compliance
@@ -123,6 +124,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
       const params = new URLSearchParams();
       if (vulnerabilityFilters.severity?.length) params.append('severity', vulnerabilityFilters.severity.join(','));
       if (vulnerabilityFilters.status?.length) params.append('status', vulnerabilityFilters.status.join(','));
+      if (vulnerabilityFilters.search) params.append('search', vulnerabilityFilters.search);
       params.append('page', page.toString());
       
       const response = await axios.get(`/api/security/vulnerabilities?${params}`);
@@ -236,7 +238,8 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     
     // Process each filter type, removing if 'all' is selected
     const processedFilters = {
-      ...currentFilters
+      ...currentFilters,
+      ...newFilters
     };
 
     if (newFilters.severity) {
@@ -245,6 +248,10 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     
     if (newFilters.status) {
       processedFilters.status = newFilters.status[0] === 'all' ? undefined : newFilters.status;
+    }
+
+    if (newFilters.search !== undefined) {
+      processedFilters.search = newFilters.search || undefined;
     }
 
     set({ 
@@ -291,5 +298,8 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     fetchComplianceStats();
   },
   
-  setPage: (page) => set({ page })
+  setPage: (newPage: number) => {
+    set({ page: newPage });
+    get().fetchVulnerabilities();
+  }
 })); 

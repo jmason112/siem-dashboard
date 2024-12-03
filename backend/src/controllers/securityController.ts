@@ -12,14 +12,26 @@ export const securityController = {
         severity,
         status,
         asset_id,
+        search,
         page = 1,
         limit = 10
       } = req.query;
 
       const query: any = {};
-      if (severity) query.severity = severity;
-      if (status) query.status = status;
+      
+      // Add filters
+      if (severity && severity !== 'all') query.severity = severity;
+      if (status && status !== 'all') query.status = status;
       if (asset_id) query.asset_id = asset_id;
+      
+      // Add search functionality
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { asset_id: { $regex: search, $options: 'i' } }
+        ];
+      }
 
       logger.info('Fetching vulnerabilities with query:', query);
 

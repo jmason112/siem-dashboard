@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { Shield, ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
 import {
   Card,
@@ -19,7 +20,18 @@ interface SecurityMetric {
 }
 
 export function SecuritySummary() {
-  const { vulnerabilityStats, complianceStats } = useSecurityStore();
+  const {
+    vulnerabilityStats,
+    complianceStats,
+    fetchVulnerabilityStats,
+    fetchComplianceStats,
+  } = useSecurityStore();
+
+  // Fetch data when component mounts
+  useEffect(() => {
+    fetchVulnerabilityStats();
+    fetchComplianceStats();
+  }, []);
 
   const vulnerabilityData: SecurityMetric[] = [
     {

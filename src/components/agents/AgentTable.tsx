@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -29,6 +30,8 @@ export const AgentTable: React.FC<AgentTableProps> = ({
   onEditClick,
   onRemoveClick,
 }) => {
+  const navigate = useNavigate();
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleString();
   };
@@ -55,7 +58,15 @@ export const AgentTable: React.FC<AgentTableProps> = ({
       <TableBody>
         {agents.map((agent) => (
           <TableRow key={agent.id}>
-            <TableCell className="font-medium">{agent.name}</TableCell>
+            <TableCell className="font-medium">
+              <Button
+                variant="link"
+                className="p-0 h-auto font-medium"
+                onClick={() => navigate(`/agents/${agent.id}`)}
+              >
+                {agent.name}
+              </Button>
+            </TableCell>
             <TableCell>
               <Badge className={getStatusColor(agent.status)}>
                 {agent.status.charAt(0).toUpperCase() + agent.status.slice(1)}

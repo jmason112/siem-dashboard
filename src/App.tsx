@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { SecurityPage } from "./pages/SecurityPage";
 import AlertsPage from "./pages/AlertsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AgentManagementPage } from "./pages/AgentManagementPage";
+import { AgentDetails } from "./components/agents/AgentDetails";
 import { MetricCard } from "./components/dashboard/MetricCard";
 import { AlertsList } from "./components/dashboard/AlertsList";
 import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
@@ -14,9 +16,7 @@ import type { Alert } from "./types";
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState<
-    "dashboard" | "security" | "alerts" | "settings" | "agents"
-  >("dashboard");
+  const [currentPage, setCurrentPage] = useState<string>("dashboard");
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<
@@ -144,63 +144,53 @@ function App() {
     }
   };
 
-  const renderContent = () => {
-    switch (currentPage) {
-      case "security":
-        return <SecurityPage />;
-      case "alerts":
-        return <AlertsPage />;
-      case "settings":
-        return <SettingsPage />;
-      case "agents":
-        return <AgentManagementPage />;
-      default:
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              {metricCards.map((metric) => (
-                <MetricCard key={metric.id} metric={metric} />
-              ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-2">
-                <TimeSeriesChart
-                  data={timeSeriesData}
-                  title="Security Events Over Time"
-                />
-              </div>
-              <div>
-                <AlertsList
-                  alerts={alerts}
-                  onAcknowledge={handleAlertAcknowledge}
-                />
-              </div>
-            </div>
-            <div className="mb-6">
-              <SecuritySummary />
-            </div>
-          </>
-        );
-    }
-  };
+  const renderDashboard = () => (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {metricCards.map((metric) => (
+          <MetricCard key={metric.id} metric={metric} />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <TimeSeriesChart
+            data={timeSeriesData}
+            title="Security Events Over Time"
+          />
+        </div>
+        <div>
+          <AlertsList alerts={alerts} onAcknowledge={handleAlertAcknowledge} />
+        </div>
+      </div>
+      <div className="mb-6">
+        <SecuritySummary />
+      </div>
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onNavigate={(page) => setCurrentPage(page)}
-      />
-
-      <main
-        className={`pt-16 transition-all duration-200 ${
-          sidebarOpen ? "lg:pl-64" : ""
-        }`}
-      >
-        <div className="p-6">{renderContent()}</div>
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onNavigate={(page) => setCurrentPage(page)}
+        />
+        <main className="lg:pl-64 pt-16">
+          <div className="container mx-auto p-6">
+            <Routes>
+              <Route path="/" element={renderDashboard()} />
+              <Route path="/security" element={<SecurityPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/agents" element={<AgentManagementPage />} />
+              <Route path="/agents/:id" element={<AgentDetails />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 

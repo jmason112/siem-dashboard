@@ -74,5 +74,17 @@ export const agentController = {
             logger.info(`Agent ${id} not found`);
             res.status(404).json({ error: 'Agent not found' });
         }
+    },
+
+    getAgentAlerts: (req: Request, res: Response) => {
+        res.json(null); // Placeholder, returns null for now
+    },
+
+    getAgentVulnerabilities: (req: Request, res: Response) => {
+        res.json(null); // Placeholder, returns null for now
+    },
+
+    getAgentCompliance: (req: Request, res: Response) => {
+        res.json(null); // Placeholder, returns null for now
     }
 }; 

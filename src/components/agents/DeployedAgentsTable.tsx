@@ -32,43 +32,43 @@ export function DeployedAgentsTable({
   const navigate = useNavigate();
 
   return (
-    <div className="rounded-md border">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className="rounded-md border border-border">
+      <table className="min-w-full divide-y divide-border">
         <thead>
           <tr>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Name/Host
             </th>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Status
             </th>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               System Info
             </th>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Resources
             </th>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Last Active
             </th>
-            <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-3 bg-muted text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-background divide-y divide-border">
           {agents.map((agent) => (
             <tr key={agent.id}>
               <td className="px-6 py-4">
                 <div className="text-sm">
                   <div
-                    className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer"
+                    className="font-medium text-foreground hover:text-primary cursor-pointer"
                     onClick={() => navigate(`/agents/${agent.id}`)}
                   >
                     {agent.name}
                   </div>
                   {agent.systemInfo && (
-                    <div className="text-gray-500">
+                    <div className="text-muted-foreground">
                       {agent.systemInfo.hostname}
                     </div>
                   )}
@@ -78,8 +78,8 @@ export function DeployedAgentsTable({
                 <span
                   className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                     agent.status === "running"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
+                      ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100"
+                      : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100"
                   }`}
                 >
                   {agent.status}
@@ -87,7 +87,7 @@ export function DeployedAgentsTable({
               </td>
               <td className="px-6 py-4">
                 {agent.systemInfo && (
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-foreground">
                     <p>{agent.systemInfo.os}</p>
                   </div>
                 )}
@@ -96,52 +96,58 @@ export function DeployedAgentsTable({
                 {agent.systemInfo && (
                   <div className="text-sm space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">CPU:</span>
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <span className="text-muted-foreground">CPU:</span>
+                      <div className="w-24 bg-muted rounded-full h-2">
                         <div
-                          className="bg-blue-600 rounded-full h-2"
+                          className="bg-primary rounded-full h-2"
                           style={{
                             width: `${agent.systemInfo.cpu_usage}%`,
                           }}
                         />
                       </div>
-                      <span>{agent.systemInfo.cpu_usage.toFixed(1)}%</span>
+                      <span className="text-foreground">
+                        {agent.systemInfo.cpu_usage.toFixed(1)}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">RAM:</span>
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <span className="text-muted-foreground">RAM:</span>
+                      <div className="w-24 bg-muted rounded-full h-2">
                         <div
-                          className="bg-blue-600 rounded-full h-2"
+                          className="bg-primary rounded-full h-2"
                           style={{
                             width: `${agent.systemInfo.memory_percent}%`,
                           }}
                         />
                       </div>
-                      <span>{agent.systemInfo.memory_percent.toFixed(1)}%</span>
+                      <span className="text-foreground">
+                        {agent.systemInfo.memory_percent.toFixed(1)}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">Disk:</span>
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <span className="text-muted-foreground">Disk:</span>
+                      <div className="w-24 bg-muted rounded-full h-2">
                         <div
-                          className="bg-blue-600 rounded-full h-2"
+                          className="bg-primary rounded-full h-2"
                           style={{
                             width: `${agent.systemInfo.disk_percent}%`,
                           }}
                         />
                       </div>
-                      <span>{agent.systemInfo.disk_percent.toFixed(1)}%</span>
+                      <span className="text-foreground">
+                        {agent.systemInfo.disk_percent.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                 {new Date(agent.lastActive).toLocaleString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {agent.status === "running" && (
                   <button
                     onClick={() => onStopAgent(agent.id)}
-                    className="text-red-600 hover:text-red-900 text-sm font-medium"
+                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 text-sm font-medium"
                   >
                     Stop
                   </button>

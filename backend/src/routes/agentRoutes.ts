@@ -9,7 +9,6 @@ router.get('/deployed', agentController.getDeployedAgents);
 router.post('/deploy', agentController.deployAgent);
 router.post('/:id/stop', agentController.stopAgent);
 router.post('/:id/heartbeat', agentController.heartbeat);
-router.get('/:id/status', agentController.getAgentStatus);
 
 router.get('/alerts/agent/:id', agentController.getAgentAlerts);
 router.get('/security/vulnerabilities/agent/:id', agentController.getAgentVulnerabilities);

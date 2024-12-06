@@ -38,7 +38,9 @@ export const agentController = {
         const agent = deployedAgents.find(a => a.id === id);
         if (agent) {
             agent.status = 'stopped';
-            res.json(agent);
+            agent.lastActive = new Date();
+            logger.info(`Agent ${id} marked as stopped`);
+            res.json({ status: 'stopped' });
         } else {
             res.status(404).json({ error: 'Agent not found' });
         }
@@ -61,17 +63,12 @@ export const agentController = {
 
     getAgentStatus: (req: Request, res: Response) => {
         const { id } = req.params;
-        logger.info(`Getting status for agent ${id}`);
-        
         const agent = deployedAgents.find(a => a.id === id);
-        logger.info(`Found agent:`, agent);
         
         if (agent) {
-            const response = { status: agent.status };
-            logger.info(`Sending response:`, response);
-            res.json(response);
+            logger.info(`Sending status for agent ${id}: ${agent.status}`);
+            res.json({ status: agent.status });
         } else {
-            logger.info(`Agent ${id} not found`);
             res.status(404).json({ error: 'Agent not found' });
         }
     },

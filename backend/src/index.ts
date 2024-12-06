@@ -150,6 +150,18 @@ io.on('connection', (socket) => {
   });
 });
 
+// Add this near the top of your existing index.ts file
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/security-agent';
+
+mongoose.connect(MONGODB_URI)
+    .then(() => {
+        logger.info('Connected to MongoDB');
+    })
+    .catch((error) => {
+        logger.error('MongoDB connection error:', error);
+        process.exit(1);
+    });
+
 // Connect to MongoDB
 mongoose.connect(config.mongoUri)
   .then(async () => {

@@ -8,6 +8,7 @@ import { VulnerabilitiesTab } from "./tabs/VulnerabilitiesTab";
 import { ComplianceTab } from "./tabs/ComplianceTab";
 import { SystemInfoTab } from "./tabs/SystemInfoTab";
 import { DeployedAgentsTable } from "./DeployedAgentsTable";
+import { Alert } from "./tabs/AlertsTab";
 
 // Mock data for development
 const mockAgentData = {
@@ -96,16 +97,6 @@ interface DeployedAgent {
   };
 }
 
-interface Alert {
-  _id: string;
-  title: string;
-  description: string;
-  severity: "critical" | "warning" | "info";
-  source: string;
-  timestamp: string;
-  status: string;
-}
-
 export function AgentDetails() {
   const { id = "1" } = useParams();
   const [agentData, setAgentData] = useState<DeployedAgent | null>(null);
@@ -121,25 +112,38 @@ export function AgentDetails() {
         const currentAgent = agents.find((a: DeployedAgent) => a.id === id);
 
         if (currentAgent) {
-          // Only fetch vulnerabilities and compliance data via REST
-          const [vulnsRes, complianceRes] = await Promise.all([
+          // Fetch all data including alerts
+          const [vulnsRes, complianceRes, alertsRes] = await Promise.all([
             fetch(`/api/security/vulnerabilities/agent/${id}`).then((r) =>
               r.ok ? r.json() : null
             ),
             fetch(`/api/security/compliance/agent/${id}`).then((r) =>
               r.ok ? r.json() : null
             ),
+            fetch(
+              `/api/alerts?source=${currentAgent.systemInfo?.hostname}&limit=1000`
+            ).then((r) => (r.ok ? r.json() : { alerts: [] })),
           ]);
+
+          // Filter alerts for this agent
+          const agentHostname = currentAgent.systemInfo?.hostname;
+          const agentAlerts = alertsRes.alerts || [];
+          console.log("Total alerts fetched:", agentAlerts.length);
+          console.log("Sample alert:", agentAlerts[0]);
 
           setAgentData({
             ...currentAgent,
             alerts: {
-              // Default alerts state, will be updated by WebSocket
-              total: 0,
-              critical: 0,
-              warning: 0,
-              info: 0,
-              alerts: [],
+              total: agentAlerts.length,
+              critical: agentAlerts.filter(
+                (a: Alert) => a.severity === "critical"
+              ).length,
+              warning: agentAlerts.filter(
+                (a: Alert) => a.severity === "warning"
+              ).length,
+              info: agentAlerts.filter((a: Alert) => a.severity === "info")
+                .length,
+              alerts: agentAlerts,
             },
             vulnerabilities: vulnsRes || {
               total: 0,
@@ -207,11 +211,26 @@ export function AgentDetails() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log("WebSocket received data:", data);
       if (data.type === "agent_alerts") {
-        setAgentData((prev) => ({
-          ...prev!,
-          alerts: data.data,
-        }));
+        console.log("Setting agent alerts:", data.data);
+        setAgentData((prev) => {
+          const alerts = Array.isArray(data.data.alerts)
+            ? data.data.alerts
+            : [];
+          return {
+            ...prev!,
+            alerts: {
+              total: alerts.length,
+              critical: alerts.filter((a: Alert) => a.severity === "critical")
+                .length,
+              warning: alerts.filter((a: Alert) => a.severity === "warning")
+                .length,
+              info: alerts.filter((a: Alert) => a.severity === "info").length,
+              alerts: alerts,
+            },
+          };
+        });
       }
     };
 
@@ -315,7 +334,14 @@ export function AgentDetails() {
 
         <TabsContent value="alerts">
           {agentData.alerts ? (
-            <AlertsTab alerts={agentData.alerts} />
+            <>
+              {console.log("Agent Alerts Data:", agentData.alerts)}
+              {console.log("Agent Source:", agentData.systemInfo?.hostname)}
+              <AlertsTab
+                alerts={agentData.alerts}
+                agentSource={agentData.systemInfo?.hostname}
+              />
+            </>
           ) : (
             <div className="text-center py-8 text-gray-500">
               No alerts data available

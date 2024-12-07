@@ -25,6 +25,7 @@ import {
 } from "../components/ui/card";
 import { DateRangePicker } from "../components/DateRangePicker";
 import { format } from "date-fns";
+import { MuiDateRangePicker } from "../components/ui/mui-date-range-picker";
 
 const severityColors = {
   low: "bg-blue-500",
@@ -157,7 +158,7 @@ export default function AlertsPage() {
           </SelectContent>
         </Select>
 
-        <DateRangePicker
+        <MuiDateRangePicker
           onDateChange={handleDateRangeChange}
           className="w-[320px]"
         />

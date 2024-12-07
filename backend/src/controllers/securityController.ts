@@ -155,6 +155,7 @@ export const securityController = {
         status,
         risk_level,
         search,
+        hostname,
         page = 1,
         limit = 10
       } = req.query;
@@ -165,6 +166,7 @@ export const securityController = {
       if (framework) query.framework = (framework as string).split(',');
       if (status) query.status = (status as string).split(',');
       if (risk_level) query.risk_level = (risk_level as string).split(',');
+      if (hostname) query.hostname = hostname;
       
       // Simple search on control_name
       if (search) {
@@ -258,24 +260,55 @@ export const securityController = {
   async receiveComplianceCheck(req: Request, res: Response) {
     try {
       const checkResults = req.body;
-      logger.info('Received compliance check:', checkResults);
+      logger.info('Received compliance check:', JSON.stringify(checkResults));
       
+      if (!checkResults.compliance || !Array.isArray(checkResults.compliance)) {
+        logger.error('Invalid compliance data format');
+        return res.status(400).json({ error: 'Invalid compliance data format' });
+      }
+
       // Update existing compliance records or create new ones
       const results = [];
       for (const result of checkResults.compliance) {
-        const updated = await Compliance.findOneAndUpdate(
-          { framework: result.framework, control_id: result.control_id },
-          result,
-          { upsert: true, new: true }
-        );
-        results.push(updated);
+        try {
+          // Ensure required fields are present
+          if (!result.framework || !result.control_id || !result.hostname) {
+            logger.error('Missing required fields in compliance check:', result);
+            continue;
+          }
+
+          const complianceData = {
+            ...result,
+            last_checked: new Date(result.last_checked),
+            next_check: new Date(result.next_check),
+            updated_at: new Date()
+          };
+
+          const updated = await Compliance.findOneAndUpdate(
+            { 
+              framework: result.framework, 
+              control_id: result.control_id,
+              hostname: result.hostname 
+            },
+            complianceData,
+            { upsert: true, new: true }
+          );
+          results.push(updated);
+        } catch (updateError) {
+          logger.error('Error updating compliance record:', updateError);
+          logger.error('Problematic record:', result);
+        }
       }
-      logger.info('Updated compliance records:', results);
+
+      logger.info(`Successfully processed ${results.length} compliance records`);
       
       // Broadcast update to all connected clients
       broadcast({ type: 'compliance_update' });
       
-      res.status(201).json({ message: 'Compliance check results received successfully' });
+      res.status(201).json({ 
+        message: 'Compliance check results received successfully',
+        processed: results.length
+      });
     } catch (error) {
       logger.error('Error processing compliance check:', error);
       res.status(500).json({ error: 'Error processing compliance results' });

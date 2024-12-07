@@ -93,7 +93,13 @@ interface DeployedAgent {
   };
   compliance?: {
     score: number;
-    categories: Array<{ name: string; score: number }>;
+    categories: {
+      name: string;
+      total: number;
+      passed: number;
+      score: number;
+    }[];
+    checks: any[];
   };
 }
 
@@ -112,12 +118,12 @@ export function AgentDetails() {
         const currentAgent = agents.find((a: DeployedAgent) => a.id === id);
 
         if (currentAgent) {
-          // Fetch all data including alerts and vulnerabilities
+          // Fetch all data including alerts, vulnerabilities, and compliance
           const [vulnsRes, complianceRes, alertsRes] = await Promise.all([
             fetch(
               `/api/security/vulnerabilities?asset_id=${currentAgent.systemInfo?.hostname}&limit=1000`
             ).then((r) => (r.ok ? r.json() : null)),
-            fetch(`/api/security/compliance/agent/${id}`).then((r) =>
+            fetch(`/api/security/compliance?limit=1000`).then((r) =>
               r.ok ? r.json() : null
             ),
             fetch(
@@ -125,16 +131,68 @@ export function AgentDetails() {
             ).then((r) => (r.ok ? r.json() : { alerts: [] })),
           ]);
 
-          // Process alerts and vulnerabilities
+          // Process alerts, vulnerabilities, and compliance data
           const agentHostname = currentAgent.systemInfo?.hostname;
           const agentAlerts = alertsRes.alerts || [];
           const agentVulnerabilities = vulnsRes?.vulnerabilities || [];
+          const allCompliance = complianceRes?.compliance || [];
 
-          console.log(
-            "Total vulnerabilities fetched:",
-            agentVulnerabilities.length
+          // Filter compliance data for this agent
+          const agentCompliance = allCompliance.filter(
+            (c: any) => c.hostname === agentHostname
           );
-          console.log("Sample vulnerability:", agentVulnerabilities[0]);
+
+          // Calculate compliance score and categories
+          const complianceScore =
+            agentCompliance.length > 0
+              ? Math.round(
+                  (agentCompliance.filter((c: any) => c.status === "compliant")
+                    .length /
+                    agentCompliance.length) *
+                    100
+                )
+              : 0;
+
+          // Group compliance checks by category
+          const complianceCategories = agentCompliance.reduce(
+            (acc: any[], check: any) => {
+              const category = acc.find((c) => c.name === check.framework);
+              if (category) {
+                category.total++;
+                if (check.status === "compliant") category.passed++;
+              } else {
+                acc.push({
+                  name: check.framework,
+                  total: 1,
+                  passed: check.status === "compliant" ? 1 : 0,
+                  score: 0,
+                });
+              }
+              return acc;
+            },
+            []
+          );
+
+          // Calculate scores for each category
+          complianceCategories.forEach(
+            (category: {
+              name: string;
+              total: number;
+              passed: number;
+              score: number;
+            }) => {
+              category.score = Math.round(
+                (category.passed / category.total) * 100
+              );
+            }
+          );
+
+          console.log("Agent compliance data:", {
+            total: agentCompliance.length,
+            score: complianceScore,
+            categories: complianceCategories,
+            checks: agentCompliance,
+          });
 
           setAgentData({
             ...currentAgent,
@@ -165,9 +223,10 @@ export function AgentDetails() {
                 .length,
               vulnerabilities: agentVulnerabilities,
             },
-            compliance: complianceRes || {
-              score: 0,
-              categories: [],
+            compliance: {
+              score: complianceScore,
+              categories: complianceCategories,
+              checks: agentCompliance,
             },
           });
         }

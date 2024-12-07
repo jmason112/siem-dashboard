@@ -14,6 +14,7 @@ export interface ICompliance {
   comments?: string;
   attachments?: string[];
   tags: string[];
+  hostname: string;
 }
 
 const complianceSchema = new mongoose.Schema<ICompliance>({
@@ -42,9 +43,12 @@ const complianceSchema = new mongoose.Schema<ICompliance>({
   remediation_plan: String,
   comments: String,
   attachments: [String],
-  tags: [String]
+  tags: [String],
+  hostname: { type: String, required: true }
 }, {
   timestamps: true
 });
+
+complianceSchema.index({ hostname: 1 });
 
 export const Compliance = mongoose.model<ICompliance>('Compliance', complianceSchema, 'compliances'); 

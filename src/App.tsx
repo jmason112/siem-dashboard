@@ -14,19 +14,22 @@ import { SecuritySummary } from "./components/security/SecuritySummary";
 import axios from "axios";
 import type { Alert } from "./types";
 
+interface TimeSeriesDataPoint {
+  timestamp: Date;
+  critical: number;
+  warning: number;
+  info: number;
+  total: number;
+}
+
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>("dashboard");
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [timeSeriesData, setTimeSeriesData] = useState<
-    Array<{
-      timestamp: Date;
-      critical: number;
-      warning: number;
-      info: number;
-    }>
-  >([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>(
+    []
+  );
   const [metrics, setMetrics] = useState({
     activeAgents: 0,
     systemHealth: 100,
@@ -79,34 +82,56 @@ function App() {
         setAlerts(alertsDataResponse.data.alerts);
 
         // Generate time series data from the last 7 days
+        const endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+
         const timeSeriesResponse = await axios.get(
-          "/api/alerts?startDate=" +
-            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+          `/api/alerts?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=1000`
         );
+
+        // Create an array of all dates in the last 7 days
+        const dates = Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + i);
+          return date;
+        });
+
+        // Initialize data for all dates
+        const initialData = dates.reduce((acc: any, date) => {
+          acc[date.toISOString().split("T")[0]] = {
+            timestamp: date,
+            critical: 0,
+            warning: 0,
+            info: 0,
+            total: 0,
+          };
+          return acc;
+        }, {});
 
         // Group alerts by day and severity
         const groupedData = timeSeriesResponse.data.alerts.reduce(
           (acc: any, alert: Alert) => {
             const date = new Date(alert.timestamp);
-            date.setHours(0, 0, 0, 0);
-            const key = date.toISOString();
+            const key = date.toISOString().split("T")[0];
 
-            if (!acc[key]) {
-              acc[key] = {
-                timestamp: date,
-                critical: 0,
-                warning: 0,
-                info: 0,
-              };
+            if (acc[key]) {
+              acc[key][alert.severity]++;
+              acc[key].total++;
             }
-
-            acc[key][alert.severity]++;
             return acc;
           },
-          {}
+          initialData
         );
 
-        setTimeSeriesData(Object.values(groupedData));
+        // Convert to array and sort by date
+        const timeSeriesData = Object.values(groupedData)
+          .map((item) => item as TimeSeriesDataPoint)
+          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        setTimeSeriesData(timeSeriesData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       }
@@ -177,6 +202,7 @@ function App() {
           <TimeSeriesChart
             data={timeSeriesData}
             title="Security Events Over Time"
+            description="Alert distribution over the past 7 days"
           />
         </div>
         <div>

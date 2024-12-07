@@ -1,8 +1,8 @@
 import * as React from "react";
 import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
-import { LocalizationProvider } from "@mui/x-date-pickers-pro";
-import { AdapterDayjs } from "@mui/x-date-pickers-pro/AdapterDayjs";
-import { DateRangePicker } from "@mui/x-date-pickers-pro/DateRangePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
 
 interface MuiDateRangePickerProps {
@@ -14,27 +14,47 @@ export function MuiDateRangePicker({
   onDateChange,
   className,
 }: MuiDateRangePickerProps) {
-  const handleDateChange = (value: any[]) => {
-    if (value[0] && value[1]) {
+  const [startDate, setStartDate] = React.useState(
+    dayjs(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+  );
+  const [endDate, setEndDate] = React.useState(dayjs(new Date()));
+
+  React.useEffect(() => {
+    if (startDate && endDate) {
       onDateChange({
-        from: value[0].toDate(),
-        to: value[1].toDate(),
+        from: startDate.toDate(),
+        to: endDate.toDate(),
       });
     }
-  };
+  }, [startDate, endDate]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <DemoContainer components={["DateRangePicker"]} sx={{ width: "100%" }}>
-        <DateRangePicker
-          defaultValue={[
-            dayjs(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
-            dayjs(new Date()),
-          ]}
-          onChange={handleDateChange}
+      <DemoContainer
+        components={["DatePicker"]}
+        sx={{ width: "100%", display: "flex", gap: 2 }}
+      >
+        <DatePicker
+          label="Start Date"
+          value={startDate}
+          onChange={(newValue) => newValue && setStartDate(newValue)}
           slotProps={{
             textField: {
               size: "small",
+              InputLabelProps: {
+                sx: {
+                  color: "rgb(31, 41, 55)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                  "&.Mui-focused": {
+                    color: "rgb(37, 99, 235)",
+                    ".dark &": {
+                      color: "rgb(59, 130, 246) !important",
+                    },
+                  },
+                },
+              },
               sx: {
                 "& .MuiInputBase-root": {
                   backgroundColor: "white",
@@ -65,75 +85,81 @@ export function MuiDateRangePicker({
                       borderColor: "rgb(55, 65, 81)",
                     },
                   },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgb(209, 213, 219)",
-                    ".dark &": {
-                      borderColor: "rgb(75, 85, 99)",
-                    },
-                  },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "rgb(37, 99, 235)",
-                    ".dark &": {
-                      borderColor: "rgb(59, 130, 246)",
-                    },
-                  },
-                },
-                "&.MuiFormControl-root": {
-                  width: "100%",
-                },
-                "& .MuiInputLabel-root": {
-                  color: "inherit",
-                  ".dark &": {
-                    color: "white",
-                  },
                 },
               },
             },
             popper: {
               sx: {
-                "&.MuiPopper-root": {
-                  "& .MuiPaper-root": {
-                    backgroundColor: "white",
+                "& .MuiPaper-root": {
+                  backgroundColor: "white",
+                  ".dark &": {
+                    backgroundColor: "rgb(17, 24, 39)",
+                  },
+                },
+                "& .css-1i3tsf3-MuiTypography-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiPickersDay-root": {
+                  color: "rgb(55, 65, 81)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219)",
+                    backgroundColor: "rgb(31, 41, 55)",
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: "rgb(37, 99, 235)",
+                    color: "white",
                     ".dark &": {
-                      backgroundColor: "rgb(17, 24, 39)",
+                      backgroundColor: "rgb(59, 130, 246)",
                     },
                   },
-                  "& .css-1i3tsf3-MuiTypography-root": {
+                },
+                "& .MuiDayCalendar-weekDayLabel": {
+                  color: "rgb(75, 85, 99)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219)",
+                  },
+                },
+                "& .css-1chuxo2-MuiPickersCalendarHeader-label": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiPickersCalendarHeader-label": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-1ckov0h-MuiSvgIcon-root, & .MuiPickersArrowSwitcher-leftArrowIcon, & .MuiPickersArrowSwitcher-rightArrowIcon":
+                  {
                     color: "rgb(31, 41, 55) !important",
                     ".dark &": {
                       color: "rgb(209, 213, 219) !important",
                     },
                   },
-                  "& .MuiTypography-subtitle1": {
+                "& .css-14yom7c-MuiSvgIcon-root-MuiPickersCalendarHeader-switchViewIcon, & .MuiPickersCalendarHeader-switchViewIcon":
+                  {
                     color: "rgb(31, 41, 55) !important",
                     ".dark &": {
                       color: "rgb(209, 213, 219) !important",
                     },
                   },
-                  "& .css-1ckov0h-MuiSvgIcon-root": {
+                "& .css-innj4t-MuiPickersYear-yearButton, & .MuiPickersYear-yearButton":
+                  {
                     color: "rgb(31, 41, 55) !important",
                     ".dark &": {
                       color: "rgb(209, 213, 219) !important",
                     },
-                  },
-                  "& .MuiPickersArrowSwitcher-rightArrowIcon": {
-                    color: "rgb(31, 41, 55) !important",
-                    ".dark &": {
-                      color: "rgb(209, 213, 219) !important",
-                    },
-                  },
-                  "& .MuiPickersArrowSwitcher-leftArrowIcon": {
-                    color: "rgb(31, 41, 55) !important",
-                    ".dark &": {
-                      color: "rgb(209, 213, 219) !important",
-                    },
-                  },
-                  "& .MuiPickersDay-root": {
-                    color: "rgb(55, 65, 81)",
-                    fontWeight: 500,
-                    ".dark &": {
-                      color: "rgb(209, 213, 219)",
-                      backgroundColor: "rgb(31, 41, 55)",
+                    "&.Mui-selected": {
+                      backgroundColor: "rgb(37, 99, 235) !important",
+                      color: "white !important",
+                      ".dark &": {
+                        backgroundColor: "rgb(59, 130, 246) !important",
+                      },
                     },
                     "&:hover": {
                       backgroundColor: "rgb(243, 244, 246)",
@@ -141,33 +167,244 @@ export function MuiDateRangePicker({
                         backgroundColor: "rgb(55, 65, 81)",
                       },
                     },
-                    "&.Mui-selected": {
-                      backgroundColor: "rgb(37, 99, 235)",
-                      color: "white",
-                      fontWeight: 600,
-                      ".dark &": {
-                        backgroundColor: "rgb(59, 130, 246)",
-                      },
+                  },
+                "& .MuiFormLabel-root, & .MuiInputLabel-root, & .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root":
+                  {
+                    color: "rgb(31, 41, 55) !important",
+                    "&.Mui-focused": {
+                      color: "rgb(37, 99, 235) !important",
                     },
-                    "&.Mui-disabled": {
-                      color: "rgb(156, 163, 175)",
-                      ".dark &": {
-                        color: "rgb(75, 85, 99)",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                      "&.Mui-focused": {
+                        color: "rgb(59, 130, 246) !important",
                       },
                     },
                   },
-                  "& .MuiDayCalendar-weekDayLabel": {
-                    color: "rgb(75, 85, 99)",
-                    fontWeight: 600,
+                "& .MuiInputLabel-shrink": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiInputLabel-outlined.MuiInputLabel-shrink": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-1sumxir-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "&& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(209, 213, 219) !important",
+                },
+                "&&& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root.Mui-focused":
+                  {
+                    color: "rgb(59, 130, 246) !important",
+                  },
+                "& .MuiFormLabel-root.MuiInputLabel-root.css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root":
+                  {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+              },
+            },
+          }}
+        />
+        <DatePicker
+          label="End Date"
+          value={endDate}
+          onChange={(newValue) => newValue && setEndDate(newValue)}
+          slotProps={{
+            textField: {
+              size: "small",
+              InputLabelProps: {
+                sx: {
+                  color: "rgb(31, 41, 55)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                  "&.Mui-focused": {
+                    color: "rgb(37, 99, 235)",
                     ".dark &": {
-                      color: "rgb(209, 213, 219)",
+                      color: "rgb(59, 130, 246) !important",
+                    },
+                  },
+                },
+              },
+              sx: {
+                "& .MuiInputBase-root": {
+                  backgroundColor: "white",
+                  ".dark &": {
+                    backgroundColor: "rgb(31, 41, 55)",
+                  },
+                  "&.Mui-focused": {
+                    backgroundColor: "white",
+                    ".dark &": {
+                      backgroundColor: "rgb(31, 41, 55)",
+                    },
+                  },
+                  "& .MuiInputBase-input": {
+                    color: "inherit",
+                    ".dark &": {
+                      color: "white",
+                    },
+                  },
+                  "& .MuiIconButton-root": {
+                    color: "inherit",
+                    ".dark &": {
+                      color: "white",
+                    },
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "rgb(229, 231, 235)",
+                    ".dark &": {
+                      borderColor: "rgb(55, 65, 81)",
                     },
                   },
                 },
               },
             },
+            popper: {
+              sx: {
+                "& .MuiPaper-root": {
+                  backgroundColor: "white",
+                  ".dark &": {
+                    backgroundColor: "rgb(17, 24, 39)",
+                  },
+                },
+                "& .css-1i3tsf3-MuiTypography-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiPickersDay-root": {
+                  color: "rgb(55, 65, 81)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219)",
+                    backgroundColor: "rgb(31, 41, 55)",
+                  },
+                  "&.Mui-selected": {
+                    backgroundColor: "rgb(37, 99, 235)",
+                    color: "white",
+                    ".dark &": {
+                      backgroundColor: "rgb(59, 130, 246)",
+                    },
+                  },
+                },
+                "& .MuiDayCalendar-weekDayLabel": {
+                  color: "rgb(75, 85, 99)",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219)",
+                  },
+                },
+                "& .css-1chuxo2-MuiPickersCalendarHeader-label": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiPickersCalendarHeader-label": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-1ckov0h-MuiSvgIcon-root, & .MuiPickersArrowSwitcher-leftArrowIcon, & .MuiPickersArrowSwitcher-rightArrowIcon":
+                  {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
+                  },
+                "& .css-14yom7c-MuiSvgIcon-root-MuiPickersCalendarHeader-switchViewIcon, & .MuiPickersCalendarHeader-switchViewIcon":
+                  {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
+                  },
+                "& .css-innj4t-MuiPickersYear-yearButton, & .MuiPickersYear-yearButton":
+                  {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
+                    "&.Mui-selected": {
+                      backgroundColor: "rgb(37, 99, 235) !important",
+                      color: "white !important",
+                      ".dark &": {
+                        backgroundColor: "rgb(59, 130, 246) !important",
+                      },
+                    },
+                    "&:hover": {
+                      backgroundColor: "rgb(243, 244, 246)",
+                      ".dark &": {
+                        backgroundColor: "rgb(55, 65, 81)",
+                      },
+                    },
+                  },
+                "& .MuiFormLabel-root, & .MuiInputLabel-root, & .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root":
+                  {
+                    color: "rgb(31, 41, 55) !important",
+                    "&.Mui-focused": {
+                      color: "rgb(37, 99, 235) !important",
+                    },
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                      "&.Mui-focused": {
+                        color: "rgb(59, 130, 246) !important",
+                      },
+                    },
+                  },
+                "& .MuiInputLabel-shrink": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .MuiInputLabel-outlined.MuiInputLabel-shrink": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-1sumxir-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(31, 41, 55) !important",
+                  ".dark &": {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+                },
+                "&& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root": {
+                  color: "rgb(209, 213, 219) !important",
+                },
+                "&&& .css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root.Mui-focused":
+                  {
+                    color: "rgb(59, 130, 246) !important",
+                  },
+                "& .MuiFormLabel-root.MuiInputLabel-root.css-hvjq6j-MuiFormLabel-root-MuiInputLabel-root":
+                  {
+                    color: "rgb(209, 213, 219) !important",
+                  },
+              },
+            },
           }}
-          className={className}
         />
       </DemoContainer>
     </LocalizationProvider>

@@ -29,8 +29,25 @@ class SecurityAgent:
         memory = psutil.virtual_memory()
         disk = psutil.disk_usage('/')
         
+        # Get all IP addresses
+        hostname = socket.gethostname()
+        ip_addresses = []
+        try:
+            # Get all network interfaces
+            for interface, addrs in psutil.net_if_addrs().items():
+                for addr in addrs:
+                    # Only get IPv4 addresses
+                    if addr.family == socket.AF_INET:
+                        ip_addresses.append({
+                            'interface': interface,
+                            'address': addr.address
+                        })
+        except Exception as e:
+            print(f"Error getting IP addresses: {e}")
+            ip_addresses = []
+        
         return {
-            'hostname': socket.gethostname(),
+            'hostname': hostname,
             'os': platform.system() + ' ' + platform.release(),
             'cpu_usage': cpu_percent,
             'memory_total': memory.total,
@@ -38,7 +55,8 @@ class SecurityAgent:
             'memory_percent': memory.percent,
             'disk_total': disk.total,
             'disk_used': disk.used,
-            'disk_percent': disk.percent
+            'disk_percent': disk.percent,
+            'ip_addresses': ip_addresses
         }
 
     def register_agent(self):

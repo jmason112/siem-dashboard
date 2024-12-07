@@ -76,6 +76,10 @@ interface DeployedAgent {
     disk_total: number;
     disk_used: number;
     disk_percent: number;
+    ip_addresses?: {
+      interface: string;
+      address: string;
+    }[];
   };
   alerts?: {
     total: number;
@@ -384,7 +388,10 @@ export function AgentDetails() {
               hostname: agentData.systemInfo?.hostname || "Unknown",
               os: agentData.systemInfo?.os || "Unknown",
               uptime: "N/A",
-              ipAddress: "N/A",
+              ipAddress:
+                agentData.systemInfo?.ip_addresses
+                  ?.map((ip) => `${ip.interface}: ${ip.address}`)
+                  .join(", ") || "N/A",
               cpu: {
                 model: "N/A",
                 cores: 0,

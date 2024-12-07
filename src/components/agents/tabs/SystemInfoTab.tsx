@@ -45,7 +45,13 @@ export function SystemInfoTab({ system }: SystemInfoTabProps) {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">IP Address</p>
-            <p className="font-medium">{system.ipAddress}</p>
+            <div className="font-medium">
+              {system.ipAddress.split(", ").map((ip, index) => (
+                <div key={index} className="text-sm">
+                  {ip}
+                </div>
+              ))}
+            </div>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Uptime</p>

@@ -112,11 +112,11 @@ export function AgentDetails() {
         const currentAgent = agents.find((a: DeployedAgent) => a.id === id);
 
         if (currentAgent) {
-          // Fetch all data including alerts
+          // Fetch all data including alerts and vulnerabilities
           const [vulnsRes, complianceRes, alertsRes] = await Promise.all([
-            fetch(`/api/security/vulnerabilities/agent/${id}`).then((r) =>
-              r.ok ? r.json() : null
-            ),
+            fetch(
+              `/api/security/vulnerabilities?asset_id=${currentAgent.systemInfo?.hostname}&limit=1000`
+            ).then((r) => (r.ok ? r.json() : null)),
             fetch(`/api/security/compliance/agent/${id}`).then((r) =>
               r.ok ? r.json() : null
             ),
@@ -125,11 +125,16 @@ export function AgentDetails() {
             ).then((r) => (r.ok ? r.json() : { alerts: [] })),
           ]);
 
-          // Filter alerts for this agent
+          // Process alerts and vulnerabilities
           const agentHostname = currentAgent.systemInfo?.hostname;
           const agentAlerts = alertsRes.alerts || [];
-          console.log("Total alerts fetched:", agentAlerts.length);
-          console.log("Sample alert:", agentAlerts[0]);
+          const agentVulnerabilities = vulnsRes?.vulnerabilities || [];
+
+          console.log(
+            "Total vulnerabilities fetched:",
+            agentVulnerabilities.length
+          );
+          console.log("Sample vulnerability:", agentVulnerabilities[0]);
 
           setAgentData({
             ...currentAgent,
@@ -145,12 +150,20 @@ export function AgentDetails() {
                 .length,
               alerts: agentAlerts,
             },
-            vulnerabilities: vulnsRes || {
-              total: 0,
-              critical: 0,
-              high: 0,
-              medium: 0,
-              low: 0,
+            vulnerabilities: {
+              total: agentVulnerabilities.length,
+              critical: agentVulnerabilities.filter(
+                (v: any) => v.severity === "critical"
+              ).length,
+              high: agentVulnerabilities.filter(
+                (v: any) => v.severity === "high"
+              ).length,
+              medium: agentVulnerabilities.filter(
+                (v: any) => v.severity === "medium"
+              ).length,
+              low: agentVulnerabilities.filter((v: any) => v.severity === "low")
+                .length,
+              vulnerabilities: agentVulnerabilities,
             },
             compliance: complianceRes || {
               score: 0,

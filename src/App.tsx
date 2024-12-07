@@ -28,39 +28,59 @@ function App() {
     }>
   >([]);
   const [metrics, setMetrics] = useState({
-    activeThreats: 0,
+    activeAgents: 0,
     systemHealth: 100,
-    failedLogins: 0,
-    networkLoad: 0,
+    criticalAlerts: 0,
+    agentsNeedingUpdate: 0,
   });
 
   // Fetch alerts and stats
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch recent alerts
-        const alertsResponse = await axios.get(
-          "http://localhost:3000/api/alerts?limit=5"
-        );
-        setAlerts(alertsResponse.data.alerts);
+        // Fetch agents data
+        const agentsResponse = await axios.get("/api/agents/deployed");
+        const agents = agentsResponse.data;
+        const activeAgents = agents.filter(
+          (a: any) => a.status === "running"
+        ).length;
+
+        // Calculate average system health from all agents
+        const systemHealth =
+          agents.reduce((acc: number, agent: any) => {
+            if (!agent.systemInfo) return acc;
+            const cpuHealth = 100 - agent.systemInfo.cpu_usage;
+            const memoryHealth = 100 - agent.systemInfo.memory_percent;
+            const diskHealth = 100 - agent.systemInfo.disk_percent;
+            return acc + (cpuHealth + memoryHealth + diskHealth) / 3;
+          }, 0) / (agents.length || 1);
 
         // Fetch alert stats
-        const statsResponse = await axios.get(
-          "http://localhost:3000/api/alerts/stats"
-        );
-        const { bySeverity } = statsResponse.data;
+        const alertsResponse = await axios.get("/api/alerts/stats");
+        const criticalAlerts = alertsResponse.data.bySeverity.critical || 0;
+
+        // Calculate agents needing updates
+        const latestVersion = "1.0.0"; // You should get this from your config or API
+        const agentsNeedingUpdate = agents.filter((agent: any) => {
+          const agentVersion = agent.systemInfo?.version || "0.0.0";
+          return agentVersion < latestVersion;
+        }).length;
 
         // Update metrics
         setMetrics({
-          activeThreats: (bySeverity.critical || 0) + (bySeverity.warning || 0),
-          systemHealth: 100 - (bySeverity.critical || 0) * 10,
-          failedLogins: Math.floor(Math.random() * 100), // This should come from auth service
-          networkLoad: Math.floor(Math.random() * 100), // This should come from network monitoring
+          activeAgents,
+          systemHealth: Math.round(systemHealth),
+          criticalAlerts,
+          agentsNeedingUpdate,
         });
+
+        // Fetch alerts for other components
+        const alertsDataResponse = await axios.get("/api/alerts?limit=5");
+        setAlerts(alertsDataResponse.data.alerts);
 
         // Generate time series data from the last 7 days
         const timeSeriesResponse = await axios.get(
-          "http://localhost:3000/api/alerts?startDate=" +
+          "/api/alerts?startDate=" +
             new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
         );
 
@@ -101,8 +121,8 @@ function App() {
   const metricCards = [
     {
       id: "1",
-      title: "Active Threats",
-      value: metrics.activeThreats,
+      title: "Active Agents",
+      value: metrics.activeAgents,
       change: 0,
       trend: "neutral" as const,
     },
@@ -112,18 +132,19 @@ function App() {
       value: metrics.systemHealth,
       change: 0,
       trend: "neutral" as const,
+      unit: "%",
     },
     {
       id: "3",
-      title: "Failed Login Attempts",
-      value: metrics.failedLogins,
+      title: "Critical Alerts",
+      value: metrics.criticalAlerts,
       change: 0,
       trend: "neutral" as const,
     },
     {
       id: "4",
-      title: "Network Load",
-      value: metrics.networkLoad,
+      title: "Agents Needing Update",
+      value: metrics.agentsNeedingUpdate,
       change: 0,
       trend: "neutral" as const,
     },

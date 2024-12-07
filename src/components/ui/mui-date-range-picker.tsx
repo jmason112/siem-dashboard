@@ -89,109 +89,79 @@ export function MuiDateRangePicker({
                 },
               },
             },
-          }}
-          sx={{
-            width: "100%",
-            "& .MuiPickersPopper-root": {
-              "& .MuiPaper-root": {
-                backgroundColor: "white",
-                color: "inherit",
-                ".dark &": {
-                  backgroundColor: "rgb(17, 24, 39)",
-                  color: "white",
-                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.3)",
-                },
-              },
-              "& .MuiDateRangeCalendar-root": {
-                backgroundColor: "white",
-                ".dark &": {
-                  backgroundColor: "rgb(17, 24, 39)",
-                },
-              },
-              "& .MuiPickersCalendarHeader-root": {
-                backgroundColor: "white",
-                ".dark &": {
-                  backgroundColor: "rgb(17, 24, 39)",
-                },
-              },
-              "& .MuiDayCalendar-monthContainer": {
-                backgroundColor: "white",
-                ".dark &": {
-                  backgroundColor: "rgb(17, 24, 39)",
-                },
-              },
-              "& .MuiPickersDay-root": {
-                color: "inherit",
-                backgroundColor: "white",
-                ".dark &": {
-                  color: "white",
-                  backgroundColor: "rgb(31, 41, 55)",
-                },
-                "&:hover": {
-                  backgroundColor: "rgb(243, 244, 246)",
-                  ".dark &": {
-                    backgroundColor: "rgb(55, 65, 81)",
-                  },
-                },
-                "&.Mui-selected": {
-                  backgroundColor: "rgb(37, 99, 235)",
-                  color: "white",
-                  ".dark &": {
-                    backgroundColor: "rgb(59, 130, 246)",
-                    "&:hover": {
-                      backgroundColor: "rgb(29, 78, 216)",
+            popper: {
+              sx: {
+                "&.MuiPopper-root": {
+                  "& .MuiPaper-root": {
+                    backgroundColor: "white",
+                    ".dark &": {
+                      backgroundColor: "rgb(17, 24, 39)",
                     },
                   },
-                },
-                "&.MuiPickersDay-today": {
-                  borderColor: "rgb(37, 99, 235)",
-                  ".dark &": {
-                    borderColor: "rgb(59, 130, 246)",
+                  "& .css-1i3tsf3-MuiTypography-root": {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
                   },
-                },
-              },
-              "& .MuiDayCalendar-weekDayLabel": {
-                color: "rgb(107, 114, 128)",
-                ".dark &": {
-                  color: "rgb(156, 163, 175)",
-                },
-              },
-              "& .MuiPickersCalendarHeader-label": {
-                color: "inherit",
-                ".dark &": {
-                  color: "white",
-                },
-              },
-              "& .MuiIconButton-root": {
-                color: "inherit",
-                ".dark &": {
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "rgb(55, 65, 81)",
+                  "& .MuiTypography-subtitle1": {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
                   },
-                },
-              },
-              "& .MuiPickersYear-yearButton": {
-                color: "inherit",
-                ".dark &": {
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "rgb(55, 65, 81)",
+                  "& .css-1ckov0h-MuiSvgIcon-root": {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
                   },
-                  "&.Mui-selected": {
-                    backgroundColor: "rgb(59, 130, 246)",
+                  "& .MuiPickersArrowSwitcher-rightArrowIcon": {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
                   },
-                },
-              },
-              "& .MuiPickersMonth-monthButton": {
-                color: "inherit",
-                ".dark &": {
-                  color: "white",
-                  "&:hover": {
-                    backgroundColor: "rgb(55, 65, 81)",
+                  "& .MuiPickersArrowSwitcher-leftArrowIcon": {
+                    color: "rgb(31, 41, 55) !important",
+                    ".dark &": {
+                      color: "rgb(209, 213, 219) !important",
+                    },
                   },
-                  "&.Mui-selected": {
-                    backgroundColor: "rgb(59, 130, 246)",
+                  "& .MuiPickersDay-root": {
+                    color: "rgb(55, 65, 81)",
+                    fontWeight: 500,
+                    ".dark &": {
+                      color: "rgb(209, 213, 219)",
+                      backgroundColor: "rgb(31, 41, 55)",
+                    },
+                    "&:hover": {
+                      backgroundColor: "rgb(243, 244, 246)",
+                      ".dark &": {
+                        backgroundColor: "rgb(55, 65, 81)",
+                      },
+                    },
+                    "&.Mui-selected": {
+                      backgroundColor: "rgb(37, 99, 235)",
+                      color: "white",
+                      fontWeight: 600,
+                      ".dark &": {
+                        backgroundColor: "rgb(59, 130, 246)",
+                      },
+                    },
+                    "&.Mui-disabled": {
+                      color: "rgb(156, 163, 175)",
+                      ".dark &": {
+                        color: "rgb(75, 85, 99)",
+                      },
+                    },
+                  },
+                  "& .MuiDayCalendar-weekDayLabel": {
+                    color: "rgb(75, 85, 99)",
+                    fontWeight: 600,
+                    ".dark &": {
+                      color: "rgb(209, 213, 219)",
+                    },
                   },
                 },
               },

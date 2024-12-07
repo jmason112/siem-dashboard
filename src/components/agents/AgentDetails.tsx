@@ -81,6 +81,7 @@ interface DeployedAgent {
     critical: number;
     warning: number;
     info: number;
+    alerts?: Alert[];
   };
   vulnerabilities?: {
     total: number;
@@ -93,6 +94,16 @@ interface DeployedAgent {
     score: number;
     categories: Array<{ name: string; score: number }>;
   };
+}
+
+interface Alert {
+  _id: string;
+  title: string;
+  description: string;
+  severity: "critical" | "warning" | "info";
+  source: string;
+  timestamp: string;
+  status: string;
 }
 
 export function AgentDetails() {
@@ -110,11 +121,8 @@ export function AgentDetails() {
         const currentAgent = agents.find((a: DeployedAgent) => a.id === id);
 
         if (currentAgent) {
-          // Fetch additional monitoring data
-          const [alertsRes, vulnsRes, complianceRes] = await Promise.all([
-            fetch(`/api/alerts/agent/${id}`).then((r) =>
-              r.ok ? r.json() : null
-            ),
+          // Only fetch vulnerabilities and compliance data via REST
+          const [vulnsRes, complianceRes] = await Promise.all([
             fetch(`/api/security/vulnerabilities/agent/${id}`).then((r) =>
               r.ok ? r.json() : null
             ),
@@ -123,36 +131,27 @@ export function AgentDetails() {
             ),
           ]);
 
-          setAgentData((prev) => {
-            // Only update if data has changed
-            const newData = {
-              ...currentAgent,
-              alerts: alertsRes ||
-                prev?.alerts || {
-                  total: 0,
-                  critical: 0,
-                  warning: 0,
-                  info: 0,
-                },
-              vulnerabilities: vulnsRes ||
-                prev?.vulnerabilities || {
-                  total: 0,
-                  critical: 0,
-                  high: 0,
-                  medium: 0,
-                  low: 0,
-                },
-              compliance: complianceRes ||
-                prev?.compliance || {
-                  score: 0,
-                  categories: [],
-                },
-            };
-
-            // Only trigger update if data actually changed
-            return JSON.stringify(prev) !== JSON.stringify(newData)
-              ? newData
-              : prev;
+          setAgentData({
+            ...currentAgent,
+            alerts: {
+              // Default alerts state, will be updated by WebSocket
+              total: 0,
+              critical: 0,
+              warning: 0,
+              info: 0,
+              alerts: [],
+            },
+            vulnerabilities: vulnsRes || {
+              total: 0,
+              critical: 0,
+              high: 0,
+              medium: 0,
+              low: 0,
+            },
+            compliance: complianceRes || {
+              score: 0,
+              categories: [],
+            },
           });
         }
       } catch (error) {
@@ -163,7 +162,6 @@ export function AgentDetails() {
     };
 
     fetchAgentData();
-    // Reduced polling frequency to 30 seconds
     const interval = setInterval(fetchAgentData, 30000);
     return () => clearInterval(interval);
   }, [id]);
@@ -191,6 +189,36 @@ export function AgentDetails() {
     const interval = setInterval(fetchDeployedAgents, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:3000/ws");
+
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+      if (agentData?.systemInfo?.hostname) {
+        ws.send(
+          JSON.stringify({
+            type: "subscribe_agent_alerts",
+            agentName: agentData.systemInfo.hostname,
+          })
+        );
+      }
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "agent_alerts") {
+        setAgentData((prev) => ({
+          ...prev!,
+          alerts: data.data,
+        }));
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [agentData?.systemInfo?.hostname]);
 
   const handleStopAgent = async (agentId: string) => {
     try {

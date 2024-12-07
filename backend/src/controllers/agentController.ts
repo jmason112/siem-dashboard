@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { logger } from '../config/logger';
 import { Agent } from '../models/Agent';
+import { Alert } from '../models/Alert';
 
 interface DeployedAgent {
     id: string;
@@ -133,8 +134,40 @@ export const agentController = {
         }
     },
 
-    getAgentAlerts: (req: Request, res: Response) => {
-        res.json(null); // Placeholder, returns null for now
+    getAgentAlerts: async (req: Request, res: Response) => {
+        try {
+            const { id } = req.params;
+            logger.info(`Fetching alerts for agent ID: ${id}`);
+            
+            // Get agent name from the database
+            const agent = await Agent.findOne({ agentId: id });
+            if (!agent) {
+                logger.error(`Agent not found with ID: ${id}`);
+                return res.status(404).json({ error: 'Agent not found' });
+            }
+
+            // Directly query alerts by source name
+            const alerts = await Alert.find({ 
+                source: agent.name ? { $regex: new RegExp(agent.name, 'i') } : ''
+            })
+            .sort({ timestamp: -1 })
+            .limit(100);
+
+            logger.info(`Found ${alerts.length} alerts for agent ${agent.name}`);
+
+            const response = {
+                total: alerts.length,
+                critical: alerts.filter(a => a.severity === 'critical').length,
+                warning: alerts.filter(a => a.severity === 'warning').length,
+                info: alerts.filter(a => a.severity === 'info').length,
+                alerts: alerts
+            };
+
+            res.json(response);
+        } catch (error) {
+            logger.error('Error in getAgentAlerts:', error);
+            res.status(500).json({ error: 'Failed to fetch alerts' });
+        }
     },
 
     getAgentVulnerabilities: (req: Request, res: Response) => {

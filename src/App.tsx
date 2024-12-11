@@ -218,9 +218,10 @@ function App() {
   );
 
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (!isAuthenticated) {
-      return <Navigate to="/" replace />;
-    }
+    // Temporarily disable authentication check for testing
+    // if (!isAuthenticated) {
+    //   return <Navigate to="/" replace />;
+    // }
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />

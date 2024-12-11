@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Sphere, MeshDistortMaterial } from "@react-three/drei";
@@ -101,6 +101,18 @@ const FeatureShowcase = () => {
 };
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
+  const handleNavigation = (path: string) => {
+    if (path.startsWith("#")) {
+      // Handle anchor links
+      document.querySelector(path)?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // Handle route navigation
+      navigate(path);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/30 dark:bg-gray-900/30">
@@ -123,30 +135,30 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link
-                to="#features"
+              <button
+                onClick={() => handleNavigation("#features")}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Features
-              </Link>
-              <Link
-                to="#pricing"
+              </button>
+              <button
+                onClick={() => handleNavigation("#pricing")}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Pricing
-              </Link>
-              <Link
-                to="#contact"
+              </button>
+              <button
+                onClick={() => handleNavigation("#contact")}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Contact
-              </Link>
-              <Link
-                to="/login"
+              </button>
+              <button
+                onClick={() => handleNavigation("/dashboard")}
                 className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
               >
                 Login
-              </Link>
+              </button>
             </motion.div>
           </nav>
           <motion.div
@@ -154,7 +166,10 @@ export default function LandingPage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Button className="hidden md:inline-flex bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300">
+            <Button
+              onClick={() => handleNavigation("/dashboard")}
+              className="hidden md:inline-flex bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300"
+            >
               Get Started
             </Button>
             <Button variant="ghost" className="md:hidden">
@@ -182,6 +197,7 @@ export default function LandingPage() {
                 monitoring for cybersecurity specialists.
               </p>
               <Button
+                onClick={() => handleNavigation("/dashboard")}
                 size="lg"
                 className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 animate-pulse-slow"
               >
@@ -391,7 +407,7 @@ export default function LandingPage() {
                   title: "Respond and Mitigate",
                   description:
                     "Take action quickly with our guided response protocols.",
-                  icon: "����️",
+                  icon: "👨‍💻",
                 },
               ].map((step, index) => (
                 <motion.div
@@ -548,6 +564,7 @@ export default function LandingPage() {
                         ))}
                       </ul>
                       <Button
+                        onClick={() => handleNavigation("/dashboard")}
                         className={`w-full bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg transition-all duration-300`}
                         size={plan.popular ? "lg" : "default"}
                       >
@@ -599,6 +616,7 @@ export default function LandingPage() {
             >
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Button
+                  onClick={() => handleNavigation("/dashboard")}
                   size="lg"
                   variant="secondary"
                   className="bg-white text-purple-600 hover:bg-gray-100 transition-all duration-300 min-w-[200px]"
@@ -606,6 +624,7 @@ export default function LandingPage() {
                   Start Free Trial
                 </Button>
                 <Button
+                  onClick={() => handleNavigation("/dashboard")}
                   size="lg"
                   variant="outline"
                   className="border-white text-white hover:bg-white/10 transition-all duration-300 min-w-[200px]"
@@ -653,8 +672,8 @@ export default function LandingPage() {
                 modern enterprises.
               </p>
               <div className="flex space-x-4">
-                <Link
-                  to="#"
+                <button
+                  onClick={() => handleNavigation("#")}
                   className="text-gray-600 hover:text-purple-600 dark:text-gray-300 dark:hover:text-purple-400 transition-colors"
                 >
                   <svg
@@ -669,9 +688,9 @@ export default function LandingPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                </Link>
-                <Link
-                  to="#"
+                </button>
+                <button
+                  onClick={() => handleNavigation("#")}
                   className="text-gray-600 hover:text-purple-600 dark:text-gray-300 dark:hover:text-purple-400 transition-colors"
                 >
                   <svg
@@ -682,9 +701,9 @@ export default function LandingPage() {
                   >
                     <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
                   </svg>
-                </Link>
-                <Link
-                  to="#"
+                </button>
+                <button
+                  onClick={() => handleNavigation("#")}
                   className="text-gray-600 hover:text-purple-600 dark:text-gray-300 dark:hover:text-purple-400 transition-colors"
                 >
                   <svg
@@ -699,7 +718,7 @@ export default function LandingPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                </Link>
+                </button>
               </div>
             </div>
             <div>
@@ -708,36 +727,36 @@ export default function LandingPage() {
               </h3>
               <ul className="space-y-2">
                 <li>
-                  <Link
-                    to="#features"
+                  <button
+                    onClick={() => handleNavigation("#features")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Features
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#pricing"
+                  <button
+                    onClick={() => handleNavigation("#pricing")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Pricing
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("/dashboard")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Security
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("/dashboard")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Enterprise
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -747,36 +766,36 @@ export default function LandingPage() {
               </h3>
               <ul className="space-y-2">
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("#")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Documentation
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("#")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     API Reference
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("#")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Status
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#contact"
+                  <button
+                    onClick={() => handleNavigation("#contact")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Contact
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -786,36 +805,36 @@ export default function LandingPage() {
               </h3>
               <ul className="space-y-2">
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("#")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     About
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="#"
+                  <button
+                    onClick={() => handleNavigation("#")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Blog
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="/privacy"
+                  <button
+                    onClick={() => handleNavigation("/privacy")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Privacy Policy
-                  </Link>
+                  </button>
                 </li>
                 <li>
-                  <Link
-                    to="/terms"
+                  <button
+                    onClick={() => handleNavigation("/terms")}
                     className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                   >
                     Terms of Service
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -826,24 +845,24 @@ export default function LandingPage() {
                 © 2023 SIEM Guard. All rights reserved.
               </p>
               <div className="flex space-x-6 mt-4 md:mt-0">
-                <Link
-                  to="#"
+                <button
+                  onClick={() => handleNavigation("/privacy")}
                   className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                 >
                   Privacy
-                </Link>
-                <Link
-                  to="#"
+                </button>
+                <button
+                  onClick={() => handleNavigation("/terms")}
                   className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                 >
                   Terms
-                </Link>
-                <Link
-                  to="#"
+                </button>
+                <button
+                  onClick={() => handleNavigation("#")}
                   className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
                 >
                   Cookies
-                </Link>
+                </button>
               </div>
             </div>
           </div>

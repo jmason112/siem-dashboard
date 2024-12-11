@@ -20,7 +20,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
 
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Shield, label: "Security", path: "/security" },
     { icon: Bell, label: "Alerts", path: "/alerts" },
     { icon: Users, label: "Agents", path: "/agents" },

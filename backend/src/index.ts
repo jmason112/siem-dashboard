@@ -13,6 +13,7 @@ import { createTestAlerts, Alert } from './models/Alert';
 import { Vulnerability } from './models/Vulnerability';
 import { Compliance } from './models/Compliance';
 import authRoutes from './routes/auth';
+import settingsRoutes from './routes/settingsRoutes';
 
 const app = express();
 const server = createServer(app);
@@ -33,6 +34,7 @@ app.use('/api/alerts', alertRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Broadcast to all connected clients
 export const broadcast = (data: any) => {

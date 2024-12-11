@@ -1,40 +1,69 @@
-import React, { useState } from 'react';
-import { Settings, User, Monitor, Shield, Search } from 'lucide-react';
-import { PreferencesSection } from '../components/settings/PreferencesSection';
-import { DisplaySection } from '../components/settings/DisplaySection';
-import { SecuritySection } from '../components/settings/SecuritySection';
+import React, { useState, useEffect } from "react";
+import { Settings, User, Monitor, Shield, Search, Loader2 } from "lucide-react";
+import { PreferencesSection } from "../components/settings/PreferencesSection";
+import { DisplaySection } from "../components/settings/DisplaySection";
+import { SecuritySection } from "../components/settings/SecuritySection";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useAuth } from "../lib/auth";
+import { Alert, AlertDescription } from "../components/ui/alert";
 
-type SettingsTab = 'preferences' | 'display' | 'security';
+type SettingsTab = "preferences" | "display" | "security";
 
 export function SettingsPage() {
-  const [currentTab, setCurrentTab] = useState<SettingsTab>('preferences');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [currentTab, setCurrentTab] = useState<SettingsTab>("preferences");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { isLoading, error, fetchUserSettings } = useSettingsStore();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchUserSettings();
+    }
+  }, [user, fetchUserSettings]);
 
   const tabs = [
     {
-      id: 'preferences' as const,
-      label: 'Preferences',
+      id: "preferences" as const,
+      label: "Preferences",
       icon: User,
     },
     {
-      id: 'display' as const,
-      label: 'Display',
+      id: "display" as const,
+      label: "Display",
       icon: Monitor,
     },
     {
-      id: 'security' as const,
-      label: 'Security',
+      id: "security" as const,
+      label: "Security",
       icon: Shield,
     },
   ];
 
   const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      );
+    }
+
+    if (!user) {
+      return (
+        <Alert className="bg-yellow-100 dark:bg-yellow-900/30">
+          <AlertDescription>
+            Please sign in to access your settings.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
     switch (currentTab) {
-      case 'preferences':
+      case "preferences":
         return <PreferencesSection />;
-      case 'display':
+      case "display":
         return <DisplaySection />;
-      case 'security':
+      case "security":
         return <SecuritySection />;
     }
   };
@@ -58,6 +87,12 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1">
         <nav className="flex space-x-1">
           {tabs.map((tab) => (
@@ -66,9 +101,10 @@ export function SettingsPage() {
               onClick={() => setCurrentTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 currentTab === tab.id
-                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
+              disabled={isLoading}
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}

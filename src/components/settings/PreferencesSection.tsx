@@ -1,31 +1,71 @@
-import React from 'react';
-import { Settings, Globe, Bell } from 'lucide-react';
-import { useSettingsStore } from '../../stores/settingsStore';
-import type { Language, Theme, NotificationChannel } from '../../types/settings';
+import React from "react";
+import { Settings, Globe, Bell } from "lucide-react";
+import { useSettingsStore } from "../../stores/settingsStore";
+import type {
+  Language,
+  Theme,
+  NotificationChannel,
+} from "../../types/settings";
+import { Alert, AlertDescription } from "../ui/alert";
+import { toast } from "../ui/use-toast";
 
 export function PreferencesSection() {
-  const { preferences, updatePreferences } = useSettingsStore();
+  const { preferences, updatePreferences, isLoading } = useSettingsStore();
 
   const languages: { value: Language; label: string }[] = [
-    { value: 'en', label: 'English' },
-    { value: 'es', label: 'Español' },
-    { value: 'fr', label: 'Français' },
-    { value: 'de', label: 'Deutsch' },
-    { value: 'ja', label: '日本語' },
+    { value: "en", label: "English" },
+    { value: "es", label: "Español" },
+    { value: "fr", label: "Français" },
+    { value: "de", label: "Deutsch" },
+    { value: "ja", label: "日本語" },
   ];
 
   const themes: { value: Theme; label: string }[] = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'system', label: 'System' },
+    { value: "light", label: "Light" },
+    { value: "dark", label: "Dark" },
+    { value: "system", label: "System" },
   ];
 
-  const notificationChannels: { value: NotificationChannel; label: string }[] = [
-    { value: 'email', label: 'Email' },
-    { value: 'sms', label: 'SMS' },
-    { value: 'push', label: 'Push Notifications' },
-    { value: 'in_app', label: 'In-App Notifications' },
+  const notificationChannels: { value: NotificationChannel; label: string }[] =
+    [
+      { value: "email", label: "Email" },
+      { value: "sms", label: "SMS" },
+      { value: "push", label: "Push Notifications" },
+      { value: "in_app", label: "In-App Notifications" },
+    ];
+
+  const timezones = [
+    "UTC",
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Los_Angeles",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "Asia/Tokyo",
+    "Asia/Shanghai",
+    "Australia/Sydney",
+    "Pacific/Auckland",
   ];
+
+  const handlePreferenceUpdate = async (
+    update: Partial<typeof preferences>
+  ) => {
+    try {
+      await updatePreferences(update);
+      toast({
+        title: "Preferences updated",
+        description: "Your preferences have been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
@@ -45,13 +85,18 @@ export function PreferencesSection() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Language</label>
+                <label className="block text-sm font-medium mb-1">
+                  Language
+                </label>
                 <select
                   value={preferences.language}
                   onChange={(e) =>
-                    updatePreferences({ language: e.target.value as Language })
+                    handlePreferenceUpdate({
+                      language: e.target.value as Language,
+                    })
                   }
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  disabled={isLoading}
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 disabled:opacity-50"
                 >
                   {languages.map((lang) => (
                     <option key={lang.value} value={lang.value}>
@@ -61,13 +106,18 @@ export function PreferencesSection() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Time Zone</label>
+                <label className="block text-sm font-medium mb-1">
+                  Time Zone
+                </label>
                 <select
                   value={preferences.timezone}
-                  onChange={(e) => updatePreferences({ timezone: e.target.value })}
-                  className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                  onChange={(e) =>
+                    handlePreferenceUpdate({ timezone: e.target.value })
+                  }
+                  disabled={isLoading}
+                  className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 disabled:opacity-50"
                 >
-                  {Intl.supportedValuesOf('timeZone').map((zone) => (
+                  {timezones.map((zone) => (
                     <option key={zone} value={zone}>
                       {zone}
                     </option>
@@ -83,61 +133,65 @@ export function PreferencesSection() {
               Notifications
             </h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Notification Channels
-                </label>
-                <div className="space-y-2">
-                  {notificationChannels.map((channel) => (
-                    <label
-                      key={channel.value}
-                      className="flex items-center gap-2"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={preferences.notifications.channels.includes(
-                          channel.value
-                        )}
-                        onChange={(e) => {
-                          const channels = e.target.checked
-                            ? [...preferences.notifications.channels, channel.value]
-                            : preferences.notifications.channels.filter(
-                                (c) => c !== channel.value
-                              );
-                          updatePreferences({
-                            notifications: {
-                              ...preferences.notifications,
-                              channels,
-                            },
-                          });
-                        }}
-                        className="rounded border-gray-300"
-                      />
-                      <span className="text-sm">{channel.label}</span>
-                    </label>
-                  ))}
-                </div>
+              <div className="space-y-2">
+                {notificationChannels.map((channel) => (
+                  <label
+                    key={channel.value}
+                    className="flex items-center gap-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={preferences.notifications.channels.includes(
+                        channel.value
+                      )}
+                      onChange={(e) => {
+                        const channels = e.target.checked
+                          ? [
+                              ...preferences.notifications.channels,
+                              channel.value,
+                            ]
+                          : preferences.notifications.channels.filter(
+                              (c) => c !== channel.value
+                            );
+                        handlePreferenceUpdate({
+                          notifications: {
+                            ...preferences.notifications,
+                            channels,
+                          },
+                        });
+                      }}
+                      disabled={isLoading}
+                      className="rounded border-gray-300 disabled:opacity-50"
+                    />
+                    <span className="text-sm">{channel.label}</span>
+                  </label>
+                ))}
               </div>
 
               <div className="space-y-2">
                 {Object.entries({
-                  alerts: 'Security Alerts',
-                  updates: 'System Updates',
-                  marketing: 'Marketing Communications',
+                  alerts: "Security Alerts",
+                  updates: "System Updates",
+                  marketing: "Marketing Communications",
                 }).map(([key, label]) => (
                   <label key={key} className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={preferences.notifications[key as keyof typeof preferences.notifications]}
+                      checked={
+                        preferences.notifications[
+                          key as "alerts" | "updates" | "marketing"
+                        ]
+                      }
                       onChange={(e) =>
-                        updatePreferences({
+                        handlePreferenceUpdate({
                           notifications: {
                             ...preferences.notifications,
                             [key]: e.target.checked,
                           },
                         })
                       }
-                      className="rounded border-gray-300"
+                      disabled={isLoading}
+                      className="rounded border-gray-300 disabled:opacity-50"
                     />
                     <span className="text-sm">{label}</span>
                   </label>

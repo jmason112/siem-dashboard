@@ -16,6 +16,7 @@ import AuthPage from "./pages/AuthPage";
 import { useAuth } from "./lib/auth";
 import axios from "axios";
 import type { Alert } from "./types";
+import { Toaster } from "sonner";
 
 interface TimeSeriesDataPoint {
   timestamp: Date;
@@ -320,6 +321,7 @@ function App() {
           }
         />
       </Routes>
+      <Toaster />
     </BrowserRouter>
   );
 }

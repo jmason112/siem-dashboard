@@ -1,100 +1,84 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { create } from "zustand";
 import { api } from "./api";
 
 interface User {
   id: string;
   name: string;
   email: string;
+  twoFactorEnabled?: boolean;
+  avatar?: string;
+  phone?: string;
 }
 
-interface AuthContextType {
+interface AuthStore {
   user: User | null;
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  checkAuth: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const useAuth = create<AuthStore>((set) => ({
+  user: null,
+  loading: true,
+  error: null,
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  checkAuth: async () => {
     try {
       const token = localStorage.getItem("auth_token");
       if (token) {
         const response = await api.auth.me();
         const userData = response.data.user;
-        setUser(userData);
+        set({ user: userData });
         localStorage.setItem("userId", userData.id);
       }
     } catch (error) {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("userId");
     } finally {
-      setLoading(false);
+      set({ loading: false });
     }
-  };
+  },
 
-  const signIn = async (email: string, password: string) => {
+  signIn: async (email: string, password: string) => {
     try {
-      setError(null);
+      set({ error: null });
       const response = await api.auth.login({ email, password });
       const { token, user } = response.data;
       localStorage.setItem("auth_token", token);
       localStorage.setItem("userId", user.id);
-      setUser(user);
+      set({ user });
     } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to sign in");
+      const errorMsg = error.response?.data?.message || "Failed to sign in";
+      set({ error: errorMsg });
       throw error;
     }
-  };
+  },
 
-  const signUp = async (name: string, email: string, password: string) => {
+  signUp: async (name: string, email: string, password: string) => {
     try {
-      setError(null);
+      set({ error: null });
       const response = await api.auth.register({ name, email, password });
       const { token, user } = response.data;
       localStorage.setItem("auth_token", token);
       localStorage.setItem("userId", user.id);
-      setUser(user);
+      set({ user });
     } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to sign up");
+      const errorMsg = error.response?.data?.message || "Failed to sign up";
+      set({ error: errorMsg });
       throw error;
     }
-  };
+  },
 
-  const signOut = async () => {
+  signOut: async () => {
     try {
       await api.auth.logout();
     } finally {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("userId");
-      setUser(null);
+      set({ user: null });
     }
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{ user, loading, error, signIn, signUp, signOut }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
+  },
+}));

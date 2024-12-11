@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model User {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  email           String           @unique
+  name            String
+  password        String
+  preferences     UserPreferences?
+  devices         UserDevice[]
+  loginHistory    LoginHistory[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model UserPreferences {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id])
+  theme           String   @default("system")
+  language        String   @default("en")
+  timezone        String   @default("UTC")
+  fontSize        String   @default("medium")
+  contrast        String   @default("normal")
+  layout          String   @default("comfortable")
+  reducedMotion   Boolean  @default(false)
+  screenReader    Boolean  @default(false)
+  notifications   Json     @default("{\"channels\":[\"email\",\"in_app\"],\"alerts\":true,\"updates\":true,\"marketing\":false}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model UserDevice {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  name        String
+  type        String
+  lastActive  DateTime @default(now())
+  location    String?
+  browser     String?
+  os          String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LoginHistory {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id])
+  timestamp   DateTime @default(now())
+  success     Boolean
+  ip          String
+  location    String?
+  device      String
+  browser     String
+} 

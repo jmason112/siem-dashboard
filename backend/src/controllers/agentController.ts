@@ -206,5 +206,99 @@ export const agentController = {
 
     getAgentCompliance: (req: Request, res: Response) => {
         res.json(null); // Placeholder, returns null for now
+    },
+
+    async updateOSQueryData(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const userId = req.user?.id || req.query.userId as string;
+            const data = req.body;
+
+            if (!userId) {
+                logger.error('No userId provided for OSQuery data update');
+                return res.status(400).json({ error: 'userId is required' });
+            }
+
+            // Validate token
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return res.status(401).json({ error: 'No token provided' });
+            }
+
+            const token = authHeader.split(' ')[1];
+            if (token !== userId) {  // Simple token validation for now
+                return res.status(401).json({ error: 'Invalid agent token' });
+            }
+
+            // Update agent with OSQuery data
+            const agent = await Agent.findOneAndUpdate(
+                { agentId: id, userId },
+                {
+                    $set: {
+                        'osqueryData': data,
+                        'lastActive': new Date()
+                    }
+                },
+                { new: true }
+            );
+
+            if (!agent) {
+                logger.error(`Agent not found with ID: ${id}`);
+                return res.status(404).json({ error: 'Agent not found' });
+            }
+
+            // Process alerts if needed
+            if (data.processes) {
+                const processes = Array.isArray(data.processes) ? data.processes : Object.values(data.processes);
+                for (const process of processes) {
+                    // Skip if process doesn't have required data
+                    if (!process.data || !process.data.path) continue;
+
+                    // Example: Alert on suspicious process paths
+                    if (process.data.path.toLowerCase().includes('temp') || process.data.path.toLowerCase().includes('tmp')) {
+                        const alert = new Alert({
+                            title: `Suspicious Process Detected: ${process.data.name}`,
+                            description: `Process running from temporary directory: ${process.data.path}`,
+                            severity: 'medium',
+                            type: 'process',
+                            source: 'osquery',
+                            sourceId: id,
+                            userId,
+                            data: process
+                        });
+                        await alert.save();
+                    }
+                }
+            }
+
+            if (data.network) {
+                const connections = Array.isArray(data.network) ? data.network : Object.values(data.network);
+                for (const conn of connections) {
+                    // Skip if connection doesn't have required data
+                    if (!conn.data) continue;
+
+                    // Example: Alert on suspicious ports
+                    const suspiciousPorts = [4444, 666, 1337, 31337];
+                    if (conn.data.local_port && suspiciousPorts.includes(conn.data.local_port)) {
+                        const alert = new Alert({
+                            title: `Suspicious Network Connection Detected`,
+                            description: `Connection on suspicious port ${conn.data.local_port} from ${conn.data.process_name}`,
+                            severity: 'high',
+                            type: 'network',
+                            source: 'osquery',
+                            sourceId: id,
+                            userId,
+                            data: conn
+                        });
+                        await alert.save();
+                    }
+                }
+            }
+
+            res.json({ success: true });
+        } catch (error) {
+            logger.error('Error updating OSQuery data:', error);
+            res.status(500).json({ error: 'Failed to update OSQuery data' });
+        }
     }
 }; 

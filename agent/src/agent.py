@@ -1,230 +1,212 @@
 import os
+import sys
 import time
-import json
-import uuid
-import requests
-import argparse
-from datetime import datetime
+import socket
 import platform
 import psutil
-import socket
-import random  # For demo alerts
+import requests
+import argparse
+import logging
+from datetime import datetime
+from src.security_scan import run_security_scan
+from src.osquery_manager import OSQueryManager
 
-class SecurityAgent:
-    def __init__(self, agent_id=None, name=None, api_url=None, user_id=None):
-        self.agent_id = agent_id or str(uuid.uuid4())
-        self.name = name or socket.gethostname()
-        self.backend_url = api_url or os.getenv('BACKEND_URL', 'http://localhost:3000')
-        self.status = 'running'
-        self.user_id = user_id or os.getenv('USER_ID')  # Get userId from environment or parameter
-        
-        if not self.user_id:
-            raise ValueError("user_id must be provided either through parameter or USER_ID environment variable")
-        
-        # Add alert thresholds
-        self.thresholds = {
-            'cpu': 80,
-            'memory': 90,
-            'disk': 85
-        }
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def get_system_info(self):
-        cpu_percent = psutil.cpu_percent(interval=1)
-        memory = psutil.virtual_memory()
-        disk = psutil.disk_usage('/')
-        
-        # Get all IP addresses
-        hostname = socket.gethostname()
-        ip_addresses = []
-        try:
-            # Get all network interfaces
-            for interface, addrs in psutil.net_if_addrs().items():
-                for addr in addrs:
-                    # Only get IPv4 addresses
-                    if addr.family == socket.AF_INET:
-                        ip_addresses.append({
-                            'interface': interface,
-                            'address': addr.address
-                        })
-        except Exception as e:
-            print(f"Error getting IP addresses: {e}")
-            ip_addresses = []
-        
-        return {
-            'hostname': hostname,
-            'os': platform.system() + ' ' + platform.release(),
-            'cpu_usage': cpu_percent,
-            'memory_total': memory.total,
-            'memory_used': memory.used,
-            'memory_percent': memory.percent,
-            'disk_total': disk.total,
-            'disk_used': disk.used,
-            'disk_percent': disk.percent,
-            'ip_addresses': ip_addresses
-        }
-
-    def register(self):
-        """Register agent with backend."""
-        try:
-            payload = {
-                'name': self.name
-            }
-            response = requests.post(
-                f'{self.backend_url}/api/agents/deploy',
-                json=payload,
-                params={'userId': self.user_id},
-                headers={'Content-Type': 'application/json'}
-            )
-            print(f"Attempting to register agent at: {response.url}")
-            print(f"Request payload: {payload}")
-            print(f"Response status: {response.status_code}")
-            print(f"Response body: {response.text}")
-            
-            if response.ok:
-                data = response.json()
-                self.agent_id = data.get('agentId')
-                print(f"Agent registered successfully with ID: {self.agent_id}")
-                return True
-            return False
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to register agent: {e}")
-            return False
-
-    def update_status(self):
-        """Update agent status in backend."""
-        try:
-            status_data = {
-                'status': self.status,
-                'systemInfo': self.get_system_info(),
-                'lastActive': datetime.utcnow().isoformat()
-            }
-            
-            response = requests.post(
-                f'{self.backend_url}/api/agents/{self.agent_id}/status',
-                json=status_data,
-                params={'userId': self.user_id},
-                headers={'Content-Type': 'application/json'}
-            )
-            response.raise_for_status()
-            print(f"Status updated successfully: {self.status}")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to update status: {e}")
-
-    def check_status(self):
-        """Check agent status from backend."""
-        try:
-            response = requests.get(
-                f'{self.backend_url}/api/agents/{self.agent_id}/status',
-                params={'userId': self.user_id},
-                headers={'Content-Type': 'application/json'}
-            )
-            response.raise_for_status()
-            status_data = response.json()
-            return status_data.get('status', 'unknown')
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to check status: {e}")
-            return 'unknown'
-
-    def generate_alert(self, alert_type, severity, message, data=None):
-        alert = {
-            'title': f"{alert_type.title()} Alert: {message[:50]}",  # First 50 chars as title
-            'description': message,
-            'severity': self._map_severity(severity),  # Map to allowed values
-            'source': self.name,
-            'sourceIp': socket.gethostname(),
-            'timestamp': datetime.utcnow().isoformat(),
-            'tags': [alert_type, severity],
-            'affectedAssets': [self.name],
-            'status': 'new'
-        }
-        
-        try:
-            response = requests.post(
-                f'{self.backend_url}/api/alerts',
-                json=alert,
-                params={'userId': self.user_id},
-                headers={'Content-Type': 'application/json'}
-            )
-            response.raise_for_status()
-            print(f"Alert sent: {message}")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send alert: {e}")
-
-    def _map_severity(self, severity):
-        # Map agent severity levels to backend severity levels
-        severity_map = {
-            'critical': 'critical',
-            'warning': 'warning',
-            'info': 'info',
-            # Add any other mappings needed
-        }
-        return severity_map.get(severity.lower(), 'info')  # Default to info if unknown severity
-
-    def run(self):
-        """Main agent loop."""
-        print("Starting security monitoring agent...")
-        
-        # Register with backend
-        if not self.register():
-            print("Failed to register agent. Exiting.")
-            return
-
-        while True:
-            try:
-                # Update system status
-                self.update_status()
-                
-                # Check our status from backend
-                backend_status = self.check_status()
-                if backend_status == 'stopped':
-                    print("Agent has been stopped by backend. Exiting.")
-                    break
-                
-                # Get current system info
-                system_info = self.get_system_info()
-                
-                # Check CPU usage
-                if system_info['cpu_usage'] > self.thresholds['cpu']:
-                    self.generate_alert(
-                        'system',
-                        'warning',
-                        f"High CPU usage: {system_info['cpu_usage']}%"
-                    )
-                
-                # Check memory usage
-                if system_info['memory_percent'] > self.thresholds['memory']:
-                    self.generate_alert(
-                        'system',
-                        'warning',
-                        f"High memory usage: {system_info['memory_percent']}%"
-                    )
-                
-                # Check disk usage
-                if system_info['disk_percent'] > self.thresholds['disk']:
-                    self.generate_alert(
-                        'system',
-                        'warning',
-                        f"High disk usage: {system_info['disk_percent']}%"
-                    )
-                
-                # Sleep for a bit
-                time.sleep(60)
-                
-            except KeyboardInterrupt:
-                print("\nStopping agent...")
-                self.status = 'stopped'
-                self.update_status()
-                break
-            except Exception as e:
-                print(f"Error in agent loop: {e}")
-                time.sleep(5)  # Wait a bit before retrying
-
-if __name__ == '__main__':
-    import argparse
+def get_system_info():
+    """Get current system information"""
+    hostname = socket.gethostname()
+    os_name = platform.system() + " " + platform.release()
     
+    # Get CPU usage
+    cpu_usage = psutil.cpu_percent(interval=1)
+    
+    # Get memory info
+    memory = psutil.virtual_memory()
+    memory_total = memory.total
+    memory_used = memory.used
+    memory_percent = memory.percent
+    
+    # Get disk info
+    disk = psutil.disk_usage('/')
+    disk_total = disk.total
+    disk_used = disk.used
+    disk_percent = disk.percent
+    
+    # Get network interfaces
+    network_info = []
+    for interface, addresses in psutil.net_if_addrs().items():
+        for addr in addresses:
+            if addr.family == socket.AF_INET:  # IPv4 addresses only
+                network_info.append({
+                    "interface": interface,
+                    "address": addr.address
+                })
+    
+    return {
+        "hostname": hostname,
+        "os": os_name,
+        "cpu_usage": cpu_usage,
+        "memory_total": memory_total,
+        "memory_used": memory_used,
+        "memory_percent": memory_percent,
+        "disk_total": disk_total,
+        "disk_used": disk_used,
+        "disk_percent": disk_percent,
+        "ip_addresses": network_info
+    }
+
+def register_agent(api_url, user_id):
+    """Register the agent with the server"""
+    hostname = socket.gethostname()
+    registration_url = f"{api_url}/api/agents/deploy?userId={user_id}"
+    
+    payload = {
+        "name": hostname
+    }
+    
+    print(f"Attempting to register agent at: {registration_url}")
+    print(f"Request payload: {payload}")
+    
+    try:
+        response = requests.post(registration_url, json=payload)
+        print(f"Response status: {response.status_code}")
+        print(f"Response body: {response.text}")
+        
+        if response.status_code == 200:
+            agent_data = response.json()
+            agent_id = agent_data.get('agentId')
+            # Use userId as token for now since we don't have token generation yet
+            token = user_id
+            print(f"Agent registered successfully with ID: {agent_id}")
+            return agent_id, token
+        else:
+            print(f"Failed to register agent: {response.status_code} - {response.text}")
+            return None, None
+            
+    except Exception as e:
+        print(f"Error registering agent: {str(e)}")
+        return None, None
+
+def update_agent_status(api_url, agent_id, user_id, token, status="running", system_info=None):
+    """Update agent status with the server"""
+    if not agent_id:
+        return False
+        
+    status_url = f"{api_url}/api/agents/{agent_id}/status"
+    
+    payload = {
+        "status": status,
+        "systemInfo": system_info or get_system_info(),
+        "lastActive": datetime.utcnow().isoformat()
+    }
+    
+    params = {
+        "userId": user_id
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    
+    try:
+        response = requests.post(status_url, json=payload, params=params, headers=headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"Failed to update status: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"Error updating status: {str(e)}")
+        return False
+
+def send_osquery_data(api_url, agent_id, user_id, token, data):
+    """Send OSQuery data to the server"""
+    if not agent_id:
+        return False
+        
+    osquery_url = f"{api_url}/api/agents/{agent_id}/osquery"
+    
+    params = {
+        "userId": user_id
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    
+    try:
+        response = requests.post(osquery_url, json=data, params=params, headers=headers)
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"Failed to send OSQuery data: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        print(f"Error sending OSQuery data: {str(e)}")
+        return False
+
+def main():
     parser = argparse.ArgumentParser(description='Security Monitoring Agent')
-    parser.add_argument('-u', '--user-id', help='User ID for authentication')
+    parser.add_argument('-u', '--user_id', required=True, help='User ID for agent registration')
+    parser.add_argument('--api_url', default='http://localhost:3000', help='API URL')
     args = parser.parse_args()
     
-    agent = SecurityAgent(user_id=args.user_id)
-    agent.run() 
+    print("Starting security monitoring agent...")
+    
+    # Initialize OSQuery manager
+    osquery = OSQueryManager()
+    
+    # Register agent
+    agent_id, token = register_agent(args.api_url, args.user_id)
+    if not agent_id:
+        print("Failed to register agent. Exiting.")
+        sys.exit(1)
+    
+    # Main monitoring loop
+    try:
+        while True:
+            # Update agent status
+            system_info = get_system_info()
+            if not update_agent_status(args.api_url, agent_id, args.user_id, token, system_info=system_info):
+                print("Failed to update agent status")
+            
+            # Collect and send OSQuery data
+            osquery_data = osquery.collect_all_data()
+            if not send_osquery_data(args.api_url, agent_id, args.user_id, token, osquery_data):
+                print("Failed to send OSQuery data")
+            
+            # Run security scan
+            scan_results = run_security_scan()
+            
+            # Send scan results
+            if scan_results:
+                try:
+                    scan_url = f"{args.api_url}/api/security/agent/vulnerability-scan"
+                    headers = {
+                        "Authorization": f"Bearer {token}"
+                    }
+                    response = requests.post(
+                        scan_url,
+                        json=scan_results,
+                        params={"userId": args.user_id},
+                        headers=headers
+                    )
+                    if response.status_code != 200:
+                        print(f"Failed to send scan results: {response.status_code} - {response.text}")
+                except Exception as e:
+                    print(f"Error sending scan results: {str(e)}")
+            
+            # Wait before next update
+            time.sleep(60)  # Update every minute
+            
+    except KeyboardInterrupt:
+        print("\nStopping agent...")
+        update_agent_status(args.api_url, agent_id, args.user_id, token, status="stopped")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main() 

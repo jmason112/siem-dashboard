@@ -15,7 +15,7 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 

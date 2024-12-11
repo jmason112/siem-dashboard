@@ -1,6 +1,7 @@
-import React from 'react';
-import { Menu, Bell } from 'lucide-react';
-import { ThemeToggle } from '../ui/ThemeToggle';
+import React from "react";
+import { Menu, Bell } from "lucide-react";
+import { ThemeToggle } from "../ui/ThemeToggle";
+import { UserAccountMenu } from "../ui/UserAccountMenu";
 
 type HeaderProps = {
   onToggleSidebar: () => void;
@@ -20,13 +21,14 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           </button>
           <h1 className="text-xl font-semibold">Security Dashboard</h1>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <button className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 relative">
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
           <ThemeToggle />
+          <UserAccountMenu />
         </div>
       </div>
     </header>

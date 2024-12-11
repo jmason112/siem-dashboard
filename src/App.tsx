@@ -214,34 +214,13 @@ function App() {
     }
   };
 
-  const renderDashboard = () => (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        {metricCards.map((metric) => (
-          <MetricCard key={metric.id} metric={metric} />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2">
-          <TimeSeriesChart
-            data={timeSeriesData}
-            title="Security Events Over Time"
-            description="Alert distribution over the past 7 days"
-          />
-        </div>
-        <div>
-          <AlertsList alerts={alerts} onAcknowledge={handleAlertAcknowledge} />
-        </div>
-      </div>
-      <div className="mb-6">
-        <SecuritySummary />
-      </div>
-    </>
-  );
-
-  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
     if (loading) {
-      return <div>Loading...</div>;
+      return (
+        <div className="flex h-screen items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        </div>
+      );
     }
 
     if (!user) {
@@ -251,14 +230,14 @@ function App() {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          onNavigate={(page) => setCurrentPage(page)}
-        />
         <main className="lg:pl-64 pt-16">
           <div className="container mx-auto p-6">{children}</div>
         </main>
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onNavigate={setCurrentPage}
+        />
       </div>
     );
   };
@@ -270,46 +249,74 @@ function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route
           path="/dashboard"
-          element={<ProtectedRoute>{renderDashboard()}</ProtectedRoute>}
+          element={
+            <ProtectedLayout>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {metricCards.map((metric) => (
+                    <MetricCard key={metric.id} metric={metric} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <TimeSeriesChart
+                      data={timeSeriesData}
+                      title="Security Events Over Time"
+                      description="Alert distribution over the past 7 days"
+                    />
+                  </div>
+                  <div>
+                    <AlertsList
+                      alerts={alerts}
+                      onAcknowledge={handleAlertAcknowledge}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <SecuritySummary />
+                </div>
+              </div>
+            </ProtectedLayout>
+          }
         />
         <Route
           path="/security"
           element={
-            <ProtectedRoute>
+            <ProtectedLayout>
               <SecurityPage />
-            </ProtectedRoute>
+            </ProtectedLayout>
           }
         />
         <Route
           path="/alerts"
           element={
-            <ProtectedRoute>
+            <ProtectedLayout>
               <AlertsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
+            </ProtectedLayout>
           }
         />
         <Route
           path="/agents"
           element={
-            <ProtectedRoute>
+            <ProtectedLayout>
               <AgentManagementPage />
-            </ProtectedRoute>
+            </ProtectedLayout>
           }
         />
         <Route
           path="/agents/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedLayout>
               <AgentDetails />
-            </ProtectedRoute>
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedLayout>
+              <SettingsPage />
+            </ProtectedLayout>
           }
         />
       </Routes>

@@ -2,14 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config';
 
+interface JwtPayload {
+  userId: string;
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: JwtPayload | any;
     }
   }
 }
 
+// Original middleware for agent authentication
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -21,11 +26,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     if (req.path.includes('/agent/')) {
       try {
         const agentSecret = process.env.AGENT_SECRET || 'default-secret';
-        console.log('Using agent secret:', agentSecret); // Debug log
-        console.log('Token:', token); // Debug log
-        
         const decoded = jwt.verify(token, agentSecret);
-        console.log('Decoded token:', decoded); // Debug log
         
         // Verify this is an agent token
         if (decoded && (decoded as any).type === 'agent') {
@@ -50,5 +51,27 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     }
   } catch (error) {
     return res.status(401).json({ error: 'Authentication failed' });
+  }
+};
+
+// New middleware for user authentication
+export const auth = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.header('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+
+    const token = authHeader.substring(7);
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || config.jwtSecret
+    ) as JwtPayload;
+
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Token is not valid' });
   }
 }; 

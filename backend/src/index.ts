@@ -12,6 +12,7 @@ import { logger } from './config/logger';
 import { createTestAlerts, Alert } from './models/Alert';
 import { Vulnerability } from './models/Vulnerability';
 import { Compliance } from './models/Compliance';
+import authRoutes from './routes/auth';
 
 const app = express();
 const server = createServer(app);
@@ -31,6 +32,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use('/api/alerts', alertRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/api/auth', authRoutes);
 
 // Broadcast to all connected clients
 export const broadcast = (data: any) => {

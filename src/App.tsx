@@ -12,6 +12,8 @@ import { AlertsList } from "./components/dashboard/AlertsList";
 import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
 import { SecuritySummary } from "./components/security/SecuritySummary";
 import LandingPage from "./pages/LandingPage";
+import AuthPage from "./pages/AuthPage";
+import { useAuth } from "./lib/auth";
 import axios from "axios";
 import type { Alert } from "./types";
 
@@ -24,9 +26,9 @@ interface TimeSeriesDataPoint {
 }
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>("dashboard");
+  const { user, loading } = useAuth();
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>(
@@ -218,10 +220,14 @@ function App() {
   );
 
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    // Temporarily disable authentication check for testing
-    // if (!isAuthenticated) {
-    //   return <Navigate to="/" replace />;
-    // }
+    if (loading) {
+      return <div>Loading...</div>;
+    }
+
+    if (!user) {
+      return <Navigate to="/auth" replace />;
+    }
+
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
@@ -241,6 +247,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route
           path="/dashboard"
           element={<ProtectedRoute>{renderDashboard()}</ProtectedRoute>}

@@ -28,6 +28,11 @@ def get_auth_token() -> str:
 def send_test_data():
     """Send test vulnerability and compliance data."""
     try:
+        user_id = os.getenv('USER_ID')
+        if not user_id:
+            print("Error: USER_ID environment variable is required")
+            return
+
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {get_auth_token()}'
@@ -52,7 +57,8 @@ def send_test_data():
                 'risk_level': 'high',
                 'remediation_plan': 'Implement new password policy',
                 'tags': ['authentication', 'password'],
-                'hostname': hostname
+                'hostname': hostname,
+                'userId': user_id
             },
             {
                 'framework': 'SOC2',
@@ -65,7 +71,8 @@ def send_test_data():
                 'next_check': (datetime.now() + timedelta(days=90)).isoformat(),
                 'risk_level': 'medium',
                 'tags': ['encryption', 'network'],
-                'hostname': hostname
+                'hostname': hostname,
+                'userId': user_id
             },
             {
                 'framework': 'GDPR',
@@ -79,7 +86,8 @@ def send_test_data():
                 'risk_level': 'high',
                 'remediation_plan': 'Upgrade encryption on remaining systems',
                 'tags': ['data-protection', 'encryption'],
-                'hostname': hostname
+                'hostname': hostname,
+                'userId': user_id
             }
         ]
 
@@ -88,6 +96,7 @@ def send_test_data():
         compliance_response = requests.post(
             f'{API_URL}/api/security/agent/compliance-check',
             json={'compliance': compliance_checks},
+            params={'userId': user_id},  # Add userId as query parameter
             headers=headers
         )
         
@@ -102,6 +111,7 @@ def send_test_data():
         vuln_response = requests.post(
             f'{API_URL}/api/security/agent/vulnerability-scan',
             json={'vulnerabilities': vulnerabilities},
+            params={'userId': user_id},  # Add userId as query parameter
             headers=headers
         )
         vuln_response.raise_for_status()
@@ -112,8 +122,7 @@ def send_test_data():
         if hasattr(e, 'response') and e.response is not None:
             print(f"Response status: {e.response.status_code}")
             print(f"Response body: {e.response.text}")
-            print(f"Request body: {e.request.body}")
-        raise
+            print("Full error:", e)
 
 if __name__ == '__main__':
     try:

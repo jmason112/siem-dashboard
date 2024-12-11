@@ -32,10 +32,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem("auth_token");
       if (token) {
         const response = await api.auth.me();
-        setUser(response.data.user);
+        const userData = response.data.user;
+        setUser(userData);
+        localStorage.setItem("userId", userData.id);
       }
     } catch (error) {
       localStorage.removeItem("auth_token");
+      localStorage.removeItem("userId");
     } finally {
       setLoading(false);
     }
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.auth.login({ email, password });
       const { token, user } = response.data;
       localStorage.setItem("auth_token", token);
+      localStorage.setItem("userId", user.id);
       setUser(user);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to sign in");
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.auth.register({ name, email, password });
       const { token, user } = response.data;
       localStorage.setItem("auth_token", token);
+      localStorage.setItem("userId", user.id);
       setUser(user);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to sign up");
@@ -72,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await api.auth.logout();
     } finally {
       localStorage.removeItem("auth_token");
+      localStorage.removeItem("userId");
       setUser(null);
     }
   };

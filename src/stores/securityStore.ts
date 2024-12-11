@@ -54,6 +54,9 @@ interface SecurityState {
   setCompliancePage: (page: number) => void;
 }
 
+// Get user ID from local storage
+const getUserId = () => localStorage.getItem('userId');
+
 export const useSecurityStore = create<SecurityState>((set, get) => ({
   // Initial state
   ws: null,
@@ -75,7 +78,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   
   // WebSocket actions
   connectWebSocket: () => {
-    const ws = new WebSocket('ws://localhost:3000/ws');
+    const ws = new WebSocket(`ws://localhost:3000/ws`);
     
     ws.onopen = () => {
       console.log('Security WebSocket connected');
@@ -123,6 +126,13 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     
     try {
       const params = new URLSearchParams();
+      const userId = getUserId();
+      
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      params.append('userId', userId);
       if (vulnerabilityFilters.severity?.length) params.append('severity', vulnerabilityFilters.severity.join(','));
       if (vulnerabilityFilters.status?.length) params.append('status', vulnerabilityFilters.status.join(','));
       if (vulnerabilityFilters.search) params.append('search', vulnerabilityFilters.search);
@@ -151,7 +161,13 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     
     try {
       const params = new URLSearchParams();
+      const userId = getUserId();
       
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      params.append('userId', userId);
       if (complianceFilters.framework?.length) {
         params.append('framework', complianceFilters.framework.join(','));
       }
@@ -186,7 +202,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   // Other actions
   fetchVulnerabilityStats: async () => {
     try {
-      const response = await axios.get('/api/security/vulnerabilities/stats');
+      const userId = getUserId();
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      const response = await axios.get(`/api/security/vulnerabilities/stats?userId=${userId}`);
       set({ vulnerabilityStats: response.data });
     } catch (error) {
       console.error('Error fetching vulnerability stats:', error);
@@ -196,7 +217,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   
   fetchComplianceStats: async () => {
     try {
-      const response = await axios.get('/api/security/compliance/stats');
+      const userId = getUserId();
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      const response = await axios.get(`/api/security/compliance/stats?userId=${userId}`);
       set({ complianceStats: response.data });
     } catch (error) {
       console.error('Error fetching compliance stats:', error);
@@ -206,7 +232,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   
   updateVulnerabilityStatus: async (id: string, status: string) => {
     try {
-      await axios.put(`/api/security/vulnerabilities/${id}/status`, { status });
+      const userId = getUserId();
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      await axios.put(`/api/security/vulnerabilities/${id}/status?userId=${userId}`, { status });
       const { fetchVulnerabilities, fetchVulnerabilityStats } = get();
       await Promise.all([
         fetchVulnerabilities(),
@@ -220,7 +251,12 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   
   updateComplianceStatus: async (id: string, status: string) => {
     try {
-      await axios.put(`/api/security/compliance/${id}/status`, { status });
+      const userId = getUserId();
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      await axios.put(`/api/security/compliance/${id}/status?userId=${userId}`, { status });
       const { fetchCompliance, fetchComplianceStats } = get();
       await Promise.all([
         fetchCompliance(),
@@ -263,45 +299,19 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
   },
   
   setComplianceFilters: (newFilters) => {
-    const currentFilters = get().complianceFilters;
-    
-    const processedFilters = {
-      ...currentFilters,
-      ...newFilters
-    };
-
-    if (newFilters.status) {
-      processedFilters.status = newFilters.status[0] === 'all' ? undefined : newFilters.status;
-    }
-    
-    if (newFilters.framework) {
-      processedFilters.framework = newFilters.framework[0] === 'all' ? undefined : newFilters.framework;
-    }
-    
-    if (newFilters.riskLevel) {
-      processedFilters.riskLevel = newFilters.riskLevel[0] === 'all' ? undefined : newFilters.riskLevel;
-    }
-
-    if (newFilters.search !== undefined) {
-      processedFilters.search = newFilters.search || undefined;
-    }
-
     set({ 
-      complianceFilters: processedFilters,
+      complianceFilters: { ...get().complianceFilters, ...newFilters },
       compliancePage: 1
     });
-
-    const { fetchCompliance, fetchComplianceStats } = get();
-    fetchCompliance();
-    fetchComplianceStats();
+    get().fetchCompliance();
   },
-
-  setVulnerabilityPage: (page: number) => {
+  
+  setVulnerabilityPage: (page) => {
     set({ vulnerabilityPage: page });
     get().fetchVulnerabilities();
   },
-
-  setCompliancePage: (page: number) => {
+  
+  setCompliancePage: (page) => {
     set({ compliancePage: page });
     get().fetchCompliance();
   }

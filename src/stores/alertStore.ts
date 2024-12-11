@@ -55,6 +55,9 @@ interface AlertStore {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Get user ID from local storage
+const getUserId = () => localStorage.getItem('userId');
+
 // Add axios instance with default headers
 const api = axios.create({
   baseURL: API_URL,
@@ -80,6 +83,13 @@ export const useAlertStore = create<AlertStore>()(
         try {
           const { filters } = get();
           const params = new URLSearchParams();
+          const userId = getUserId();
+          
+          if (!userId) {
+            throw new Error('User ID not found');
+          }
+          
+          params.append('userId', userId);
           params.append('page', page.toString());
           
           if (filters.severity) params.append('severity', filters.severity.join(','));
@@ -105,7 +115,12 @@ export const useAlertStore = create<AlertStore>()(
 
       fetchStats: async () => {
         try {
-          const response = await api.get('/api/alerts/stats');
+          const userId = getUserId();
+          if (!userId) {
+            throw new Error('User ID not found');
+          }
+          
+          const response = await api.get(`/api/alerts/stats?userId=${userId}`);
           set({ stats: response.data });
         } catch (error) {
           set({ error: 'Failed to fetch stats' });
@@ -114,7 +129,12 @@ export const useAlertStore = create<AlertStore>()(
 
       updateAlert: async (id: string, data: Partial<Alert>) => {
         try {
-          const response = await api.put(`/api/alerts/${id}`, data);
+          const userId = getUserId();
+          if (!userId) {
+            throw new Error('User ID not found');
+          }
+          
+          const response = await api.put(`/api/alerts/${id}?userId=${userId}`, data);
           const { alerts } = get();
           const updatedAlerts = alerts.map(alert => 
             alert._id === id ? response.data : alert
@@ -128,7 +148,12 @@ export const useAlertStore = create<AlertStore>()(
 
       deleteAlert: async (id: string) => {
         try {
-          await api.delete(`/api/alerts/${id}`);
+          const userId = getUserId();
+          if (!userId) {
+            throw new Error('User ID not found');
+          }
+          
+          await api.delete(`/api/alerts/${id}?userId=${userId}`);
           const { alerts } = get();
           set({ alerts: alerts.filter(alert => alert._id !== id) });
           await get().fetchStats();
@@ -146,52 +171,32 @@ export const useAlertStore = create<AlertStore>()(
       },
 
       connectWebSocket: () => {
-        const { websocket } = get();
-        if (websocket?.readyState === WebSocket.CONNECTING || 
-            websocket?.readyState === WebSocket.OPEN) {
-          return;
-        }
+        const ws = new WebSocket(`ws://localhost:3000/ws`);
+        set({ websocket: ws });
 
-        try {
-          const ws = new WebSocket('ws://localhost:3000/ws');
-          
-          ws.onopen = () => {
-            console.log('WebSocket connected');
-          };
-          
-          ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'heartbeat') return;
-            
-            const { alerts } = get();
-            set({ alerts: [data, ...alerts] });
-          };
-          
-          ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-          };
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'alert') {
+            get().fetchAlerts();
+            get().fetchStats();
+          }
+        };
 
-          ws.onclose = (event) => {
-            if (event.wasClean) {
-              console.log('WebSocket closed cleanly');
-            } else {
-              console.log('WebSocket disconnected, attempting to reconnect...');
-              setTimeout(() => get().connectWebSocket(), 3000);
-            }
-          };
-          
-          set({ websocket: ws });
-        } catch (error) {
+        ws.onclose = () => {
+          set({ websocket: null });
+          // Try to reconnect after 5 seconds
+          setTimeout(() => get().connectWebSocket(), 5000);
+        };
+
+        ws.onerror = (error) => {
           console.error('WebSocket connection error:', error);
-          setTimeout(() => get().connectWebSocket(), 3000);
-        }
+        };
       },
 
       disconnectWebSocket: () => {
         const { websocket } = get();
         if (websocket) {
-          websocket.onclose = null; // Prevent reconnection attempt
-          websocket.close(1000, 'Client disconnecting');
+          websocket.close();
           set({ websocket: null });
         }
       }

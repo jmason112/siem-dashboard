@@ -15,7 +15,16 @@ export const alertController = {
         limit = 10
       } = req.query;
 
-      const query: any = {};
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for alerts fetch');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query: any = {
+        userId: userId
+      };
 
       if (severity) query.severity = severity;
       if (status) query.status = status;
@@ -47,15 +56,25 @@ export const alertController = {
   // Get alert statistics
   async getStats(req: Request, res: Response) {
     try {
-      const total = await Alert.countDocuments();
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for alert stats');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query = { userId: userId };
+      const total = await Alert.countDocuments(query);
       
       const bySeverity = await Alert.aggregate([
+        { $match: query },
         { $group: { _id: '$severity', count: { $sum: 1 } } }
       ]).then(results => 
         results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
       );
 
       const byStatus = await Alert.aggregate([
+        { $match: query },
         { $group: { _id: '$status', count: { $sum: 1 } } }
       ]).then(results => 
         results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
@@ -75,7 +94,18 @@ export const alertController = {
   // Create new alert
   async createAlert(req: Request, res: Response) {
     try {
-      const alert = new Alert(req.body);
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for alert creation');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const alertData = {
+        ...req.body,
+        userId: userId
+      };
+      const alert = new Alert(alertData);
       await alert.save();
       res.status(201).json(alert);
     } catch (error) {
@@ -87,8 +117,18 @@ export const alertController = {
   // Update alert
   async updateAlert(req: Request, res: Response) {
     try {
-      const alert = await Alert.findByIdAndUpdate(
-        req.params.id,
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for alert update');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const alert = await Alert.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          userId: userId
+        },
         req.body,
         { new: true }
       );
@@ -105,7 +145,17 @@ export const alertController = {
   // Delete alert
   async deleteAlert(req: Request, res: Response) {
     try {
-      const alert = await Alert.findByIdAndDelete(req.params.id);
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for alert deletion');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const alert = await Alert.findOneAndDelete({
+        _id: req.params.id,
+        userId: userId
+      });
       if (!alert) {
         return res.status(404).json({ error: 'Alert not found' });
       }

@@ -3,15 +3,19 @@ import { agentController } from '../controllers/agentController';
 
 const router = express.Router();
 
-router.get('/status/:id', agentController.getAgentStatus);
+// Agent deployment and registration
+router.post('/deploy', agentController.deployAgent);
+
+// Get all deployed agents
 router.get('/deployed', agentController.getDeployedAgents);
 
-router.post('/deploy', agentController.deployAgent);
-router.post('/:id/stop', agentController.stopAgent);
-router.post('/:id/heartbeat', agentController.heartbeat);
+// Agent status endpoints
+router.post('/:id/status', agentController.updateAgentStatus);
+router.get('/:id/status', agentController.getAgentStatus);
 
-router.get('/alerts/agent/:id', agentController.getAgentAlerts);
-router.get('/security/vulnerabilities/agent/:id', agentController.getAgentVulnerabilities);
-router.get('/security/compliance/agent/:id', agentController.getAgentCompliance);
+// Agent data endpoints
+router.get('/:id/alerts', agentController.getAgentAlerts);
+router.get('/:id/vulnerabilities', agentController.getAgentVulnerabilities);
+router.get('/:id/compliance', agentController.getAgentCompliance);
 
 export default router; 

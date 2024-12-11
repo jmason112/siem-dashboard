@@ -17,7 +17,16 @@ export const securityController = {
         limit = 10
       } = req.query;
 
-      const query: any = {};
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for vulnerability fetch');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query: any = {
+        userId: userId
+      };
       
       // Add filters
       if (severity && severity !== 'all') query.severity = severity;
@@ -61,9 +70,18 @@ export const securityController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      const userId = req.user?.id || req.query.userId as string;
 
-      const vulnerability = await Vulnerability.findByIdAndUpdate(
-        id,
+      if (!userId) {
+        logger.error('No userId provided for vulnerability status update');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const vulnerability = await Vulnerability.findOneAndUpdate(
+        {
+          _id: id,
+          userId: userId
+        },
         { status },
         { new: true }
       );
@@ -72,7 +90,7 @@ export const securityController = {
         return res.status(404).json({ error: 'Vulnerability not found' });
       }
 
-      // Broadcast update to all connected clients
+      // Broadcast update to all clients
       broadcast({ type: 'vulnerability_update' });
 
       res.json(vulnerability);
@@ -86,9 +104,18 @@ export const securityController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      const userId = req.user?.id || req.query.userId as string;
 
-      const compliance = await Compliance.findByIdAndUpdate(
-        id,
+      if (!userId) {
+        logger.error('No userId provided for compliance status update');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const compliance = await Compliance.findOneAndUpdate(
+        {
+          _id: id,
+          userId: userId
+        },
         { status },
         { new: true }
       );
@@ -97,7 +124,7 @@ export const securityController = {
         return res.status(404).json({ error: 'Compliance record not found' });
       }
 
-      // Broadcast update to all connected clients
+      // Broadcast update to all clients
       broadcast({ type: 'compliance_update' });
 
       res.json(compliance);
@@ -109,21 +136,32 @@ export const securityController = {
 
   async getVulnerabilityStats(req: Request, res: Response) {
     try {
-      const total = await Vulnerability.countDocuments();
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for vulnerability stats');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query = { userId: userId };
+      const total = await Vulnerability.countDocuments(query);
       
       const bySeverity = await Vulnerability.aggregate([
+        { $match: query },
         { $group: { _id: '$severity', count: { $sum: 1 } } }
       ]).then(results => 
         results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
       );
 
       const byStatus = await Vulnerability.aggregate([
+        { $match: query },
         { $group: { _id: '$status', count: { $sum: 1 } } }
       ]).then(results => 
         results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
       );
 
       const topAssets = await Vulnerability.aggregate([
+        { $match: query },
         { $group: { 
           _id: '$asset_id',
           count: { $sum: 1 },
@@ -160,7 +198,16 @@ export const securityController = {
         limit = 10
       } = req.query;
 
-      const query: any = {};
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for compliance fetch');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query: any = {
+        userId: userId
+      };
       
       // Handle array parameters
       if (framework) query.framework = (framework as string).split(',');
@@ -196,7 +243,16 @@ export const securityController = {
 
   async getComplianceStats(req: Request, res: Response) {
     try {
+      const userId = req.user?.id || req.query.userId as string;
+
+      if (!userId) {
+        logger.error('No userId provided for compliance stats');
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      const query = { userId: userId };
       const byFramework = await Compliance.aggregate([
+        { $match: query },
         {
           $group: {
             _id: '$framework',
@@ -215,12 +271,14 @@ export const securityController = {
       ]);
 
       const byRiskLevel = await Compliance.aggregate([
+        { $match: query },
         { $group: { _id: '$risk_level', count: { $sum: 1 } } }
       ]).then(results => 
         results.reduce((acc, { _id, count }) => ({ ...acc, [_id]: count }), {})
       );
 
       const upcomingDeadlines = await Compliance.find({
+        ...query,
         next_check: { $gte: new Date() },
         status: { $ne: 'compliant' }
       })
@@ -279,6 +337,7 @@ export const securityController = {
 
           const complianceData = {
             ...result,
+            userId: req.user.id,
             last_checked: new Date(result.last_checked),
             next_check: new Date(result.next_check),
             updated_at: new Date()
@@ -288,7 +347,8 @@ export const securityController = {
             { 
               framework: result.framework, 
               control_id: result.control_id,
-              hostname: result.hostname 
+              hostname: result.hostname,
+              userId: req.user.id
             },
             complianceData,
             { upsert: true, new: true }
@@ -300,18 +360,10 @@ export const securityController = {
         }
       }
 
-      logger.info(`Successfully processed ${results.length} compliance records`);
-      
-      // Broadcast update to all connected clients
-      broadcast({ type: 'compliance_update' });
-      
-      res.status(201).json({ 
-        message: 'Compliance check results received successfully',
-        processed: results.length
-      });
+      res.json({ success: true, results });
     } catch (error) {
       logger.error('Error processing compliance check:', error);
-      res.status(500).json({ error: 'Error processing compliance results' });
+      res.status(500).json({ error: 'Error processing compliance check' });
     }
   }
 }; 

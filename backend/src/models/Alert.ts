@@ -14,6 +14,7 @@ export interface IAlert {
   resolvedAt?: Date;
   resolvedBy?: string;
   resolution?: string;
+  userId: string;
 }
 
 const alertSchema = new mongoose.Schema<IAlert>({
@@ -38,7 +39,8 @@ const alertSchema = new mongoose.Schema<IAlert>({
   assignedTo: String,
   resolvedAt: Date,
   resolvedBy: String,
-  resolution: String
+  resolution: String,
+  userId: { type: String, required: true, index: true }
 }, {
   timestamps: true
 });

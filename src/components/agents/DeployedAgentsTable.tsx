@@ -1,33 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-
-interface DeployedAgent {
-  id: string;
-  name: string;
-  status: "running" | "stopped";
-  deployedAt: string;
-  lastActive: string;
-  systemInfo?: {
-    hostname: string;
-    os: string;
-    cpu_usage: number;
-    memory_total: number;
-    memory_used: number;
-    memory_percent: number;
-    disk_total: number;
-    disk_used: number;
-    disk_percent: number;
-  };
-}
+import type { DeployedAgent } from "../../hooks/useDeployedAgents";
 
 interface DeployedAgentsTableProps {
   agents: DeployedAgent[];
   onStopAgent: (agentId: string) => void;
+  onEditClick: (agent: DeployedAgent) => void;
 }
 
 export function DeployedAgentsTable({
   agents,
   onStopAgent,
+  onEditClick,
 }: DeployedAgentsTableProps) {
   const navigate = useNavigate();
 
@@ -143,7 +127,13 @@ export function DeployedAgentsTable({
               <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                 {new Date(agent.lastActive).toLocaleString()}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-6 py-4 whitespace-nowrap space-x-2">
+                <button
+                  onClick={() => onEditClick(agent)}
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  Edit
+                </button>
                 {agent.status === "running" && (
                   <button
                     onClick={() => onStopAgent(agent.id)}

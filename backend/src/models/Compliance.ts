@@ -15,6 +15,7 @@ export interface ICompliance {
   attachments?: string[];
   tags: string[];
   hostname: string;
+  userId: string;
 }
 
 const complianceSchema = new mongoose.Schema<ICompliance>({
@@ -44,7 +45,8 @@ const complianceSchema = new mongoose.Schema<ICompliance>({
   comments: String,
   attachments: [String],
   tags: [String],
-  hostname: { type: String, required: true }
+  hostname: { type: String, required: true },
+  userId: { type: String, required: true, index: true }
 }, {
   timestamps: true
 });

@@ -45,8 +45,16 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          console.error("No user ID found in localStorage");
+          return;
+        }
+
         // Fetch agents data
-        const agentsResponse = await axios.get("/api/agents/deployed");
+        const agentsResponse = await axios.get(
+          `/api/agents/deployed?userId=${userId}`
+        );
         const agents = agentsResponse.data;
         const activeAgents = agents.filter(
           (a: any) => a.status === "running"
@@ -63,7 +71,9 @@ function App() {
           }, 0) / (agents.length || 1);
 
         // Fetch alert stats
-        const alertsResponse = await axios.get("/api/alerts/stats");
+        const alertsResponse = await axios.get(
+          `/api/alerts/stats?userId=${userId}`
+        );
         const criticalAlerts = alertsResponse.data.bySeverity.critical || 0;
 
         // Calculate agents needing updates
@@ -82,7 +92,9 @@ function App() {
         });
 
         // Fetch alerts for other components
-        const alertsDataResponse = await axios.get("/api/alerts?limit=5");
+        const alertsDataResponse = await axios.get(
+          `/api/alerts?limit=5&userId=${userId}`
+        );
         setAlerts(alertsDataResponse.data.alerts);
 
         // Generate time series data from the last 7 days
@@ -93,7 +105,7 @@ function App() {
         startDate.setHours(0, 0, 0, 0);
 
         const timeSeriesResponse = await axios.get(
-          `/api/alerts?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=1000`
+          `/api/alerts?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=1000&userId=${userId}`
         );
 
         // Create an array of all dates in the last 7 days
@@ -141,11 +153,13 @@ function App() {
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      // Only fetch data if user is logged in
+      fetchData();
+      const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]); // Add user as a dependency
 
   const metricCards = [
     {
@@ -181,7 +195,13 @@ function App() {
 
   const handleAlertAcknowledge = async (id: string) => {
     try {
-      await axios.put(`http://localhost:3000/api/alerts/${id}`, {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        console.error("No user ID found in localStorage");
+        return;
+      }
+
+      await axios.put(`/api/alerts/${id}?userId=${userId}`, {
         status: "in_progress",
       });
       setAlerts(

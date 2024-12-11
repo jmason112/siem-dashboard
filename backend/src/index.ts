@@ -46,7 +46,18 @@ export const broadcast = (data: any) => {
 // Agent alert endpoint
 app.post('/api/agent/alert', async (req, res) => {
   try {
-    const alertData = req.body;
+    // Get userId from query parameter if not available in req.user
+    const userId = req.user?.id || req.query.userId as string;
+
+    if (!userId) {
+      logger.error('No userId provided for agent alert');
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const alertData = {
+      ...req.body,
+      userId: userId
+    };
     const alert = new Alert(alertData);
     await alert.save();
     

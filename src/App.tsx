@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { SecurityPage } from "./pages/SecurityPage";
@@ -11,6 +11,7 @@ import { MetricCard } from "./components/dashboard/MetricCard";
 import { AlertsList } from "./components/dashboard/AlertsList";
 import { TimeSeriesChart } from "./components/dashboard/TimeSeriesChart";
 import { SecuritySummary } from "./components/security/SecuritySummary";
+import LandingPage from "./pages/LandingPage";
 import axios from "axios";
 import type { Alert } from "./types";
 
@@ -23,6 +24,7 @@ interface TimeSeriesDataPoint {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>("dashboard");
 
@@ -215,8 +217,11 @@ function App() {
     </>
   );
 
-  return (
-    <BrowserRouter>
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/" replace />;
+    }
+    return (
       <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <Sidebar
@@ -225,18 +230,61 @@ function App() {
           onNavigate={(page) => setCurrentPage(page)}
         />
         <main className="lg:pl-64 pt-16">
-          <div className="container mx-auto p-6">
-            <Routes>
-              <Route path="/" element={renderDashboard()} />
-              <Route path="/security" element={<SecurityPage />} />
-              <Route path="/alerts" element={<AlertsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/agents" element={<AgentManagementPage />} />
-              <Route path="/agents/:id" element={<AgentDetails />} />
-            </Routes>
-          </div>
+          <div className="container mx-auto p-6">{children}</div>
         </main>
       </div>
+    );
+  };
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/dashboard"
+          element={<ProtectedRoute>{renderDashboard()}</ProtectedRoute>}
+        />
+        <Route
+          path="/security"
+          element={
+            <ProtectedRoute>
+              <SecurityPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alerts"
+          element={
+            <ProtectedRoute>
+              <AlertsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agents"
+          element={
+            <ProtectedRoute>
+              <AgentManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agents/:id"
+          element={
+            <ProtectedRoute>
+              <AgentDetails />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

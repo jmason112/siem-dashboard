@@ -42,12 +42,16 @@ export function DeployedAgentsTable({
         </thead>
         <tbody className="bg-background divide-y divide-border">
           {agents.map((agent) => (
-            <tr key={agent.id}>
+            <tr key={agent.agentId || agent.id} className="hover:bg-muted/50">
               <td className="px-6 py-4">
                 <div className="text-sm">
                   <div
                     className="font-medium text-foreground hover:text-primary cursor-pointer"
-                    onClick={() => navigate(`/agents/${agent.id}`)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/agents/${agent.agentId || agent.id}`);
+                    }}
                   >
                     {agent.name}
                   </div>

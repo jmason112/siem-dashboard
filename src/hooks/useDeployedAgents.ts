@@ -3,6 +3,7 @@ import axios from 'axios';
 
 export interface DeployedAgent {
   id: string;
+  agentId?: string;
   name: string;
   status: "running" | "stopped";
   deployedAt: string;

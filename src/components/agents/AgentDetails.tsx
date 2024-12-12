@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Card } from "./../ui/card";
-import { Activity, AlertCircle } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { Activity, AlertCircle, Database } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./../ui/tabs";
 import { AlertsTab } from "./tabs/AlertsTab";
 import { VulnerabilitiesTab } from "./tabs/VulnerabilitiesTab";
 import { ComplianceTab } from "./tabs/ComplianceTab";
 import { SystemInfoTab } from "./tabs/SystemInfoTab";
+import { OSQueryTab } from "./tabs/OSQueryTab";
 import { DeployedAgentsTable } from "./DeployedAgentsTable";
 import { Alert } from "./tabs/AlertsTab";
+import { getAuthStore } from "../../stores/authStore";
+import { useAuth } from "../../lib/auth";
+import axios from "axios";
 
 // Mock data for development
 const mockAgentData = {
@@ -62,6 +66,7 @@ const mockAgentData = {
 
 interface DeployedAgent {
   id: string;
+  agentId?: string;
   name: string;
   status: "running" | "stopped";
   deployedAt: string;
@@ -105,184 +110,98 @@ interface DeployedAgent {
     }[];
     checks: any[];
   };
+  osqueryData?: any;
 }
 
 export function AgentDetails() {
-  const { id = "1" } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [agentData, setAgentData] = useState<DeployedAgent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [deployedAgents, setDeployedAgents] = useState<DeployedAgent[]>([]);
+  const { user } = useAuth();
+  const authStore = getAuthStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAgentData = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/agents/deployed`);
-        const agents = await response.json();
-        const currentAgent = agents.find((a: DeployedAgent) => a.id === id);
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    fetchData();
+  }, [id, user]);
 
-        if (currentAgent) {
-          // Fetch all data including alerts, vulnerabilities, and compliance
-          const [vulnsRes, complianceRes, alertsRes] = await Promise.all([
-            fetch(
-              `/api/security/vulnerabilities?asset_id=${currentAgent.systemInfo?.hostname}&limit=1000`
-            ).then((r) => (r.ok ? r.json() : null)),
-            fetch(`/api/security/compliance?limit=1000`).then((r) =>
-              r.ok ? r.json() : null
-            ),
-            fetch(
-              `/api/alerts?source=${currentAgent.systemInfo?.hostname}&limit=1000`
-            ).then((r) => (r.ok ? r.json() : { alerts: [] })),
-          ]);
+  const fetchData = async () => {
+    if (!id || !user) return;
 
-          // Process alerts, vulnerabilities, and compliance data
-          const agentHostname = currentAgent.systemInfo?.hostname;
-          const agentAlerts = alertsRes.alerts || [];
-          const agentVulnerabilities = vulnsRes?.vulnerabilities || [];
-          const allCompliance = complianceRes?.compliance || [];
+    try {
+      console.log("Fetching agent data for id:", id);
+      setIsLoading(true);
+      setError(null);
 
-          // Filter compliance data for this agent
-          const agentCompliance = allCompliance.filter(
-            (c: any) => c.hostname === agentHostname
-          );
-
-          // Calculate compliance score and categories
-          const complianceScore =
-            agentCompliance.length > 0
-              ? Math.round(
-                  (agentCompliance.filter((c: any) => c.status === "compliant")
-                    .length /
-                    agentCompliance.length) *
-                    100
-                )
-              : 0;
-
-          // Group compliance checks by category
-          const complianceCategories = agentCompliance.reduce(
-            (acc: any[], check: any) => {
-              const category = acc.find((c) => c.name === check.framework);
-              if (category) {
-                category.total++;
-                if (check.status === "compliant") category.passed++;
-              } else {
-                acc.push({
-                  name: check.framework,
-                  total: 1,
-                  passed: check.status === "compliant" ? 1 : 0,
-                  score: 0,
-                });
-              }
-              return acc;
-            },
-            []
-          );
-
-          // Calculate scores for each category
-          complianceCategories.forEach(
-            (category: {
-              name: string;
-              total: number;
-              passed: number;
-              score: number;
-            }) => {
-              category.score = Math.round(
-                (category.passed / category.total) * 100
-              );
-            }
-          );
-
-          console.log("Agent compliance data:", {
-            total: agentCompliance.length,
-            score: complianceScore,
-            categories: complianceCategories,
-            checks: agentCompliance,
-          });
-
-          setAgentData({
-            ...currentAgent,
-            alerts: {
-              total: agentAlerts.length,
-              critical: agentAlerts.filter(
-                (a: Alert) => a.severity === "critical"
-              ).length,
-              warning: agentAlerts.filter(
-                (a: Alert) => a.severity === "warning"
-              ).length,
-              info: agentAlerts.filter((a: Alert) => a.severity === "info")
-                .length,
-              alerts: agentAlerts,
-            },
-            vulnerabilities: {
-              total: agentVulnerabilities.length,
-              critical: agentVulnerabilities.filter(
-                (v: any) => v.severity === "critical"
-              ).length,
-              high: agentVulnerabilities.filter(
-                (v: any) => v.severity === "high"
-              ).length,
-              medium: agentVulnerabilities.filter(
-                (v: any) => v.severity === "medium"
-              ).length,
-              low: agentVulnerabilities.filter((v: any) => v.severity === "low")
-                .length,
-              vulnerabilities: agentVulnerabilities,
-            },
-            compliance: {
-              score: complianceScore,
-              categories: complianceCategories,
-              checks: agentCompliance,
-            },
-          });
+      const userId = localStorage.getItem("userId");
+      const response = await axios.get(
+        `http://localhost:5173/api/agents/deployed?userId=${userId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-      } catch (error) {
-        console.error("Failed to fetch agent data:", error);
-      } finally {
-        setIsLoading(false);
+      );
+
+      console.log("Response data:", response.data);
+      setDeployedAgents(response.data);
+      const agent = response.data.find((a: any) => a.agentId === id);
+      console.log("Found agent:", agent);
+
+      if (!agent) {
+        setError("Agent not found");
+        return;
       }
-    };
 
-    fetchAgentData();
-    const interval = setInterval(fetchAgentData, 30000);
-    return () => clearInterval(interval);
-  }, [id]);
+      setAgentData(agent);
+    } catch (error) {
+      console.error("Error fetching agent data:", error);
+      setError("Failed to load agent data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  useEffect(() => {
-    const fetchDeployedAgents = async () => {
-      try {
-        const response = await fetch("/api/agents/deployed");
-        if (!response.ok) {
-          throw new Error("Failed to fetch agents");
+  const handleStopAgent = async (agentId: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/agents/${agentId}/stop`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
         }
-        const data = await response.json();
-
-        // Only update if data has changed
-        setDeployedAgents((prev) => {
-          return JSON.stringify(prev) !== JSON.stringify(data) ? data : prev;
-        });
-      } catch (error) {
-        console.error("Failed to fetch deployed agents:", error);
+      );
+      if (!response.ok) {
+        throw new Error("Failed to stop agent");
       }
-    };
-
-    fetchDeployedAgents();
-    // Reduced polling frequency to 15 seconds
-    const interval = setInterval(fetchDeployedAgents, 15000);
-    return () => clearInterval(interval);
-  }, []);
+      await fetchData();
+    } catch (error) {
+      console.error("Failed to stop agent:", error);
+    }
+  };
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:3000/ws");
+    if (!authStore.token || !agentData?.systemInfo?.hostname) return;
+
+    const ws = new WebSocket(`ws://localhost:3000/ws?token=${authStore.token}`);
 
     ws.onopen = () => {
       console.log("WebSocket connected");
-      if (agentData?.systemInfo?.hostname) {
-        ws.send(
-          JSON.stringify({
-            type: "subscribe_agent_alerts",
-            agentName: agentData.systemInfo.hostname,
-          })
-        );
-      }
+      ws.send(
+        JSON.stringify({
+          type: "subscribe_agent_alerts",
+          agentName: agentData.systemInfo!.hostname,
+        })
+      );
     };
 
     ws.onmessage = (event) => {
@@ -291,11 +210,12 @@ export function AgentDetails() {
       if (data.type === "agent_alerts") {
         console.log("Setting agent alerts:", data.data);
         setAgentData((prev) => {
+          if (!prev) return prev;
           const alerts = Array.isArray(data.data.alerts)
             ? data.data.alerts
             : [];
           return {
-            ...prev!,
+            ...prev,
             alerts: {
               total: alerts.length,
               critical: alerts.filter((a: Alert) => a.severity === "critical")
@@ -310,23 +230,16 @@ export function AgentDetails() {
       }
     };
 
-    return () => {
-      ws.close();
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
     };
-  }, [agentData?.systemInfo?.hostname]);
 
-  const handleStopAgent = async (agentId: string) => {
-    try {
-      await fetch(`/api/agents/${agentId}/stop`, {
-        method: "POST",
-      });
-      const response = await fetch("/api/agents/deployed");
-      const data = await response.json();
-      setDeployedAgents(data);
-    } catch (error) {
-      console.error("Failed to stop agent:", error);
-    }
-  };
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [agentData?.systemInfo?.hostname, authStore.token]);
 
   const formatBytes = (bytes: number) => {
     const sizes = ["B", "KB", "MB", "GB", "TB"];
@@ -334,6 +247,16 @@ export function AgentDetails() {
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center space-y-4">
+          <p className="text-red-500">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -377,6 +300,7 @@ export function AgentDetails() {
       <Tabs defaultValue="system" className="space-y-4">
         <TabsList className="bg-gray-100 dark:bg-gray-800">
           <TabsTrigger value="system">System Info</TabsTrigger>
+          <TabsTrigger value="osquery">OSQuery Data</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="vulnerabilities">Vulnerabilities</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -409,6 +333,10 @@ export function AgentDetails() {
               },
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="osquery">
+          <OSQueryTab osqueryData={agentData.osqueryData || {}} />
         </TabsContent>
 
         <TabsContent value="alerts">
@@ -454,6 +382,7 @@ export function AgentDetails() {
         <DeployedAgentsTable
           agents={deployedAgents}
           onStopAgent={handleStopAgent}
+          onEditClick={() => {}}
         />
       </div>
     </div>

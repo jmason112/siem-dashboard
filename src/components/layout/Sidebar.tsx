@@ -7,6 +7,7 @@ import {
   Settings,
   Users,
   X,
+  Sparkles,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ export function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
     { icon: Shield, label: "Security", path: "/security" },
     { icon: Bell, label: "Alerts", path: "/alerts" },
     { icon: Users, label: "Agents", path: "/agents" },
+    { icon: Sparkles, label: "AI Insights", path: "/ai-insights" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
 

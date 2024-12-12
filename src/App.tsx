@@ -18,6 +18,7 @@ import axios from "axios";
 import type { Alert } from "./types";
 import { Toaster } from "sonner";
 import { AgentHealthMetrics } from "./components/dashboard/AgentHealthMetrics";
+import AIInsightsPage from "./pages/AIInsights";
 
 interface TimeSeriesDataPoint {
   timestamp: Date;
@@ -321,6 +322,14 @@ function App() {
           element={
             <ProtectedLayout>
               <SettingsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/ai-insights"
+          element={
+            <ProtectedLayout>
+              <AIInsightsPage />
             </ProtectedLayout>
           }
         />

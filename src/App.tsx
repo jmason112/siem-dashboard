@@ -17,6 +17,7 @@ import { useAuth } from "./lib/auth";
 import axios from "axios";
 import type { Alert } from "./types";
 import { Toaster } from "sonner";
+import { AgentHealthMetrics } from "./components/dashboard/AgentHealthMetrics";
 
 interface TimeSeriesDataPoint {
   timestamp: Date;
@@ -257,6 +258,9 @@ function App() {
                   {metricCards.map((metric) => (
                     <MetricCard key={metric.id} metric={metric} />
                   ))}
+                </div>
+                <div className="mt-6">
+                  <AgentHealthMetrics />
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">

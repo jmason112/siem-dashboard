@@ -35,14 +35,15 @@ export type UserPreferences = {
   screenReader: boolean;
 };
 
-export type UserProfile = {
+export interface UserProfile {
   id: string;
   email: string;
   name: string;
+  twoFactorEnabled?: boolean;
   avatar?: string;
   phone?: string;
-  twoFactorEnabled: boolean;
-};
+  aiProvider?: string;
+}
 
 export type ConnectedDevice = {
   id: string;

@@ -15,6 +15,9 @@ model User {
   preferences     UserPreferences?
   devices         UserDevice[]
   loginHistory    LoginHistory[]
+  aiInsights      AIInsight[]
+  agents          Agent[]
+  alerts          Alert[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -32,6 +35,8 @@ model UserPreferences {
   reducedMotion   Boolean  @default(false)
   screenReader    Boolean  @default(false)
   notifications   Json     @default("{\"channels\":[\"email\",\"in_app\"],\"alerts\":true,\"updates\":true,\"marketing\":false}")
+  aiProvider      String?  @default("openai")
+  aiApiKey        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -60,4 +65,40 @@ model LoginHistory {
   location    String?
   device      String
   browser     String
+}
+
+model AIInsight {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @db.ObjectId
+  user            User     @relation(fields: [userId], references: [id])
+  type            String
+  content         Json
+  generatedAt     DateTime @default(now())
+  expiresAt       DateTime
+  metadata        Json?
+}
+
+model Agent {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  name        String
+  status      String
+  systemInfo  Json?
+  lastActive  DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Alert {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  severity    String
+  message     String
+  status      String    @default("new")
+  timestamp   DateTime  @default(now())
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 } 

@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Settings, User, Monitor, Shield, Search, Loader2 } from "lucide-react";
+import {
+  Settings,
+  User,
+  Monitor,
+  Shield,
+  Search,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { PreferencesSection } from "../components/settings/PreferencesSection";
 import { DisplaySection } from "../components/settings/DisplaySection";
 import { SecuritySection } from "../components/settings/SecuritySection";
+import { AISettingsSection } from "../components/settings/AISettingsSection";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useAuth } from "../lib/auth";
 import { Alert, AlertDescription } from "../components/ui/alert";
 
-type SettingsTab = "preferences" | "display" | "security";
+type SettingsTab = "preferences" | "display" | "security" | "ai";
 
 export function SettingsPage() {
   const [currentTab, setCurrentTab] = useState<SettingsTab>("preferences");
@@ -37,6 +46,11 @@ export function SettingsPage() {
       label: "Security",
       icon: Shield,
     },
+    {
+      id: "ai" as const,
+      label: "AI Settings",
+      icon: Sparkles,
+    },
   ];
 
   const renderContent = () => {
@@ -65,6 +79,8 @@ export function SettingsPage() {
         return <DisplaySection />;
       case "security":
         return <SecuritySection />;
+      case "ai":
+        return <AISettingsSection />;
     }
   };
 

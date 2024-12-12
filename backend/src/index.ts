@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import alertRoutes from './routes/alertRoutes';
 import securityRoutes from './routes/securityRoutes';
 import agentRoutes from './routes/agentRoutes';
+import aiInsightsRoutes from './routes/aiInsightsRoutes';
 import { config } from './config/config';
 import { logger } from './config/logger';
 import { createTestAlerts, Alert } from './models/Alert';
@@ -35,6 +36,7 @@ app.use('/api/security', securityRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/ai-insights', aiInsightsRoutes);
 
 // Broadcast to all connected clients
 export const broadcast = (data: any) => {

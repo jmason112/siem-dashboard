@@ -20,6 +20,7 @@ interface SettingsState {
   removeDevice: (deviceId: string) => Promise<void>;
   fetchUserSettings: () => Promise<void>;
   setError: (error: string | null) => void;
+  updateAISettings: (settings: { provider: string; apiKey: string }) => Promise<void>;
 }
 
 const API_BASE_URL = '/api';
@@ -180,6 +181,35 @@ export const useSettingsStore = create<SettingsState>()(
 
           set((state) => ({
             devices: state.devices.filter((device) => device.id !== deviceId),
+          }));
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : 'An error occurred' });
+          throw error;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      updateAISettings: async (settings) => {
+        const user = useAuth.getState().user;
+        if (!user) return;
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await fetch(`${API_BASE_URL}/ai-insights/settings`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(settings),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update AI settings');
+          }
+
+          set((state) => ({
+            profile: state.profile
+              ? { ...state.profile, aiProvider: settings.provider }
+              : null,
           }));
         } catch (error) {
           set({ error: error instanceof Error ? error.message : 'An error occurred' });

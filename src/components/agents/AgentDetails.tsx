@@ -92,6 +92,11 @@ export function AgentDetails() {
       setError(null);
 
       const userId = localStorage.getItem("userId");
+      if (!userId) {
+        throw new Error("No userId found");
+      }
+
+      // Fetch base agent data
       const response = await axios.get(
         `http://localhost:3000/api/agents/deployed?userId=${userId}`,
         {
@@ -102,43 +107,83 @@ export function AgentDetails() {
         }
       );
 
-      if (!userId) {
-        throw new Error("No userId found");
-      }
-
-      console.log("Response data:", response.data);
-      setDeployedAgents(
-        response.data.map((agent: any) => ({
-          ...agent,
-          id: agent._id,
-          agentId: agent.id,
-          userId: userId,
-        }))
-      );
-
-      // Find agent by any of its possible IDs
       const agent = response.data.find(
         (a: any) => a.agentId === id || a._id === id || a.id === id
       );
-
-      console.log("Found agent:", agent);
 
       if (!agent) {
         setError("Agent not found");
         return;
       }
 
-      setAgentData({
+      // Fetch additional data
+      const hostname = agent.systemInfo?.hostname || agent.name;
+      const [vulnsRes, complianceRes, alertsRes] = await Promise.all([
+        axios.get(
+          `http://localhost:3000/api/security/vulnerabilities?asset_id=${hostname}&userId=${userId}`
+        ),
+        axios.get(
+          `http://localhost:3000/api/security/compliance?hostname=${hostname}&userId=${userId}`
+        ),
+        axios.get(
+          `http://localhost:3000/api/alerts?source=${hostname}&userId=${userId}`
+        ),
+      ]);
+
+      const enrichedAgent: DeployedAgent = {
+        ...agent,
         id: agent._id,
         agentId: agent.id,
-        name: agent.name,
-        status: agent.status,
-        deployedAt: agent.deployedAt,
-        lastActive: agent.lastActive,
-        systemInfo: agent.systemInfo,
-        osqueryData: agent.osqueryData,
-        userId: agent.userId || userId || "",
-      });
+        userId,
+        alerts: {
+          total: alertsRes.data.alerts.length,
+          critical: alertsRes.data.alerts.filter(
+            (a: any) => a.severity === "critical"
+          ).length,
+          warning: alertsRes.data.alerts.filter(
+            (a: any) => a.severity === "warning"
+          ).length,
+          info: alertsRes.data.alerts.filter((a: any) => a.severity === "info")
+            .length,
+          alerts: alertsRes.data.alerts,
+        },
+        vulnerabilities: {
+          total: vulnsRes.data.vulnerabilities.length,
+          critical: vulnsRes.data.vulnerabilities.filter(
+            (v: any) => v.severity === "critical"
+          ).length,
+          high: vulnsRes.data.vulnerabilities.filter(
+            (v: any) => v.severity === "high"
+          ).length,
+          medium: vulnsRes.data.vulnerabilities.filter(
+            (v: any) => v.severity === "medium"
+          ).length,
+          low: vulnsRes.data.vulnerabilities.filter(
+            (v: any) => v.severity === "low"
+          ).length,
+        },
+        compliance: {
+          score:
+            complianceRes.data.compliance.reduce(
+              (acc: number, curr: any) => acc + curr.score,
+              0
+            ) / (complianceRes.data.compliance.length || 1),
+          categories: complianceRes.data.compliance,
+          checks: complianceRes.data.compliance.flatMap(
+            (c: any) => c.checks || []
+          ),
+        },
+      };
+
+      setAgentData(enrichedAgent);
+      setDeployedAgents(
+        response.data.map((a: any) => ({
+          ...a,
+          id: a._id,
+          agentId: a.id,
+          userId,
+        }))
+      );
     } catch (error) {
       console.error("Error fetching agent data:", error);
       setError("Failed to load agent data");

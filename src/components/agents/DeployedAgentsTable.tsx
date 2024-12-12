@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import type { DeployedAgent } from "../../hooks/useDeployedAgents";
+import { DeployedAgent } from "../../hooks/useDeployedAgents";
 
 interface DeployedAgentsTableProps {
   agents: DeployedAgent[];

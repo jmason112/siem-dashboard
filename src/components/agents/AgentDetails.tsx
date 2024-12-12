@@ -13,6 +13,7 @@ import { Alert } from "./tabs/AlertsTab";
 import { getAuthStore } from "../../stores/authStore";
 import { useAuth } from "../../lib/auth";
 import axios from "axios";
+import type { DeployedAgent } from "../../hooks/useDeployedAgents";
 
 // Mock data for development
 const mockAgentData = {
@@ -64,55 +65,6 @@ const mockAgentData = {
   },
 };
 
-interface DeployedAgent {
-  id: string;
-  agentId?: string;
-  name: string;
-  status: "running" | "stopped";
-  deployedAt: string;
-  lastActive: string;
-  systemInfo?: {
-    hostname: string;
-    os: string;
-    cpu_usage: number;
-    memory_total: number;
-    memory_used: number;
-    memory_percent: number;
-    disk_total: number;
-    disk_used: number;
-    disk_percent: number;
-    ip_addresses?: {
-      interface: string;
-      address: string;
-    }[];
-  };
-  alerts?: {
-    total: number;
-    critical: number;
-    warning: number;
-    info: number;
-    alerts?: Alert[];
-  };
-  vulnerabilities?: {
-    total: number;
-    critical: number;
-    high: number;
-    medium: number;
-    low: number;
-  };
-  compliance?: {
-    score: number;
-    categories: {
-      name: string;
-      total: number;
-      passed: number;
-      score: number;
-    }[];
-    checks: any[];
-  };
-  osqueryData?: any;
-}
-
 export function AgentDetails() {
   const { id } = useParams<{ id: string }>();
   const [agentData, setAgentData] = useState<DeployedAgent | null>(null);
@@ -141,7 +93,7 @@ export function AgentDetails() {
 
       const userId = localStorage.getItem("userId");
       const response = await axios.get(
-        `http://localhost:5173/api/agents/deployed?userId=${userId}`,
+        `http://localhost:3000/api/agents/deployed?userId=${userId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -150,9 +102,25 @@ export function AgentDetails() {
         }
       );
 
+      if (!userId) {
+        throw new Error("No userId found");
+      }
+
       console.log("Response data:", response.data);
-      setDeployedAgents(response.data);
-      const agent = response.data.find((a: any) => a.agentId === id);
+      setDeployedAgents(
+        response.data.map((agent: any) => ({
+          ...agent,
+          id: agent._id,
+          agentId: agent.id,
+          userId: userId,
+        }))
+      );
+
+      // Find agent by any of its possible IDs
+      const agent = response.data.find(
+        (a: any) => a.agentId === id || a._id === id || a.id === id
+      );
+
       console.log("Found agent:", agent);
 
       if (!agent) {
@@ -160,7 +128,17 @@ export function AgentDetails() {
         return;
       }
 
-      setAgentData(agent);
+      setAgentData({
+        id: agent._id,
+        agentId: agent.id,
+        name: agent.name,
+        status: agent.status,
+        deployedAt: agent.deployedAt,
+        lastActive: agent.lastActive,
+        systemInfo: agent.systemInfo,
+        osqueryData: agent.osqueryData,
+        userId: agent.userId || userId || "",
+      });
     } catch (error) {
       console.error("Error fetching agent data:", error);
       setError("Failed to load agent data");

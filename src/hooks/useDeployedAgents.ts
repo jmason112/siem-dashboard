@@ -8,6 +8,7 @@ export interface DeployedAgent {
   status: "running" | "stopped";
   deployedAt: string;
   lastActive: string;
+  userId: string;
   systemInfo?: {
     hostname: string;
     os: string;
@@ -18,7 +19,33 @@ export interface DeployedAgent {
     disk_total: number;
     disk_used: number;
     disk_percent: number;
+    ip_addresses?: { interface: string; address: string; }[];
   };
+  alerts?: {
+    total: number;
+    critical: number;
+    warning: number;
+    info: number;
+    alerts?: any[];
+  };
+  vulnerabilities?: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  compliance?: {
+    score: number;
+    categories: {
+      name: string;
+      total: number;
+      passed: number;
+      score: number;
+    }[];
+    checks: any[];
+  };
+  osqueryData?: any;
 }
 
 export function useDeployedAgents() {
